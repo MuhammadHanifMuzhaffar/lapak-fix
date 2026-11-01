@@ -52,5 +52,14 @@ it('melaporkan buku yang tidak seimbang apa adanya', function () {
 
     $this->sebagai($this->keuangan)->getJson('/api/v1/buku-besar/dompet')
         ->assertOk()
-        ->assertJsonPath('meta.seimbang', false);
+        ->assertJsonPath('meta.seimbang', false)
+        ->assertJsonPath('meta.jumlah_seluruh_saldo', 849_999);
+});
+
+it('tidak memiliki satu pun pintu yang menulis ke buku besar', function () {
+    $menulis = collect(Route::getRoutes())
+        ->filter(fn ($rute) => str_starts_with($rute->uri(), 'api/v1/buku-besar'))
+        ->flatMap(fn ($rute) => array_diff($rute->methods(), ['GET', 'HEAD']));
+
+    expect($menulis->all())->toBe([]);
 });

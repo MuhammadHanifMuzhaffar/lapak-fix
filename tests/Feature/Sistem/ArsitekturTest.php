@@ -1,20 +1,24 @@
 <?php
 
-it('melarang penulisan langsung pada tabel pengguna_peran di luar PengelolaPeran', function () {
-    $jalur = app_path();
-    $penghubung = [];
+it('hanya mengubah peran pengguna lewat PengelolaPeran (LP-2)', function () {
+    $pelanggar = [];
+    $berkas = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path()));
 
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jalur));
-    foreach ($iterator as $satu) {
+    foreach ($berkas as $satu) {
         if (! $satu->isFile() || $satu->getFilename() === 'PengelolaPeran.php') {
             continue;
         }
 
         $isi = file_get_contents($satu->getPathname());
-        if (str_contains($isi, 'pengguna_peran')) {
-            $penghubung[] = $satu->getPathname();
+        $lewatRelasi = '/->peran\(\)\s*->(attach|detach|sync\w*|toggle|updateExistingPivot)\(/';
+        $lewatTabel = '/table\(\'pengguna_peran\'\)\s*->(insert\w*|update|delete|upsert)\(/';
+
+        $menulis = preg_match($lewatRelasi, $isi) || preg_match($lewatTabel, $isi);
+
+        if ($menulis) {
+            $pelanggar[] = $satu->getFilename();
         }
     }
 
-    expect($penghubung)->toBeEmpty('Penyebutan pengguna_peran di luar PengelolaPeran: '.implode(', ', $penghubung));
+    expect($pelanggar)->toBeEmpty('Menulis peran di luar PengelolaPeran: '.implode(', ', $pelanggar));
 });
