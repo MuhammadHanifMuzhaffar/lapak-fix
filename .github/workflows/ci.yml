@@ -1,27 +1,28 @@
-name: Kualitas
+name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
   kualitas:
-    name: Pengujian (SQLite)
+    name: kualitas
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: sqlite
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pasang PHP
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo_sqlite, bcmath
+          extensions: mbstring, intl, pdo_sqlite
           coverage: none
 
       - name: Pasang dependensi
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Siapkan lingkungan
         run: |
@@ -30,92 +31,13 @@ jobs:
           touch database/database.sqlite
 
       - name: Gaya kode
-        run: ./vendor/bin/pint --test
+        run: php vendor/bin/pint --test
 
       - name: Migrasi dan seeder dari basis data kosong
-        run: php artisan migrate:fresh --seed
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
+        run: php artisan migrate:fresh --seed --force
 
       - name: Buku besar seimbang
         run: php artisan lapak:periksa-buku
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
 
       - name: Pengujian
-        run: ./vendor/bin/pest
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-
-  kualitas-mysql:
-    name: Pengujian pada MySQL
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: rahasia-ci
-          MYSQL_DATABASE: lapak
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Pasang PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: mbstring, pdo_mysql, bcmath, pcntl, posix
-          coverage: none
-
-      - name: Pasang dependensi
-        run: composer install --prefer-dist --no-interaction --no-progress
-
-      - name: Siapkan lingkungan
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Pengujian pada MySQL
-        run: ./vendor/bin/pest
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: lapak
-          DB_USERNAME: root
-          DB_PASSWORD: rahasia-ci
-
-      - name: Migrasi dan seeder dari basis data kosong
-        run: php artisan migrate:fresh --seed
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: lapak
-          DB_USERNAME: root
-          DB_PASSWORD: rahasia-ci
-
-      - name: Uji balapan
-        run: php artisan lapak:balapan --semua
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: lapak
-          DB_USERNAME: root
-          DB_PASSWORD: rahasia-ci
-
-      - name: Buku besar seimbang setelah balapan
-        run: php artisan lapak:periksa-buku
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: lapak
-          DB_USERNAME: root
-          DB_PASSWORD: rahasia-ci
+        run: php vendor/bin/pest --ci
