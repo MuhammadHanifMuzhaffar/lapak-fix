@@ -21,6 +21,11 @@ final class PenggunaResource extends JsonResource
             'surel' => $this->surel,
             'telepon' => $this->telepon,
             'status' => $this->status->value,
+            'peran' => $this->whenLoaded('peran', fn () => $this->peran
+                ->sortBy('nama')
+                ->pluck('nama')
+                ->values()
+                ->all()),
             'terdaftar_pada' => $this->created_at?->toIso8601String(),
         ];
     }

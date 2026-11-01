@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MasukController;
+use App\Http\Controllers\PeranPenggunaController;
 use App\Http\Controllers\RegistrasiController;
 use App\Http\Controllers\SesiController;
 use Illuminate\Support\Facades\Route;
@@ -20,4 +21,19 @@ Route::middleware('auth:sesi')->group(function (): void {
     Route::delete('sesi/{pengenal}', [SesiController::class, 'destroy'])
         ->middleware('sesi.segar')
         ->name('sesi.destroy');
+
+    Route::middleware('izin:peran.kelola')
+        ->prefix('admin/pengguna')
+        ->name('admin.pengguna.')
+        ->whereNumber('id')
+        ->group(function (): void {
+            Route::get('/', [PeranPenggunaController::class, 'index'])->name('index');
+
+            Route::middleware('sesi.segar')->group(function (): void {
+                Route::put('{id}/peran/{peran}', [PeranPenggunaController::class, 'beri'])
+                    ->name('peran.beri');
+                Route::delete('{id}/peran/{peran}', [PeranPenggunaController::class, 'cabut'])
+                    ->name('peran.cabut');
+            });
+        });
 });
