@@ -1,13 +1,14 @@
 <?php
 
 use App\Enums\StatusProduk;
+use App\Enums\StatusToko;
 use App\Models\Kategori;
 use App\Models\Pengguna;
 use App\Models\Produk;
 use App\Models\Toko;
 
 beforeEach(function () {
-    $this->sri = Pengguna::factory()->create();
+    $this->sri = Pengguna::factory()->penjual()->create();
     $this->tokoSri = Toko::factory()->for($this->sri, 'pemilik')->create();
     $this->batik = Kategori::factory()->create();
 
@@ -17,10 +18,30 @@ beforeEach(function () {
     ], $timpa);
 });
 
-it('menjawab 404 bagi pengguna yang belum membuka toko', function () {
-    $this->sebagai(Pengguna::factory()->create())
+it('menolak pemilik toko yang belum disetujui: ia belum menjadi penjual', function () {
+    $tini = Pengguna::factory()->pembeli()->create();
+    Toko::factory()->menunggu()->for($tini, 'pemilik')->create();
+
+    $this->sebagai($tini)
         ->postJson('/api/v1/toko-saya/produk', ($this->dataProduk)())
-        ->assertNotFound();
+        ->assertForbidden()
+        ->assertJsonPath('galat.kode', 'DITOLAK');
+    $this->getJson('/api/v1/toko-saya/produk')->assertForbidden();
+
+    expect(Produk::count())->toBe(0);
+});
+
+it('tetap membolehkan penjual mengelola produk selagi tokonya ditangguhkan', function () {
+    $this->tokoSri->forceFill(['status' => StatusToko::Ditangguhkan])->save();
+
+    $id = $this->sebagai($this->sri)
+        ->postJson('/api/v1/toko-saya/produk', ($this->dataProduk)(['status' => 'aktif']))
+        ->assertCreated()
+        ->json('data.id');
+
+    // Boleh dikelola, tetapi tidak tampil: yang menutupnya status toko, bukan izin (LP-4).
+    expect(Produk::find($id))->not->toBeNull();
+    $this->tanpaKunci()->getJson('/api/v1/produk')->assertJsonCount(0, 'data');
 });
 
 it('menyimpan produk sebagai draf di toko milik pengguna sesi', function () {

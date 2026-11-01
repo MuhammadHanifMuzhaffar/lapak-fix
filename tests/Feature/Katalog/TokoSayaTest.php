@@ -39,7 +39,7 @@ it('mengenali produk milik pengguna (bahan LP-5)', function () {
 });
 
 it('membuka toko atas nama pengguna sesi, bukan atas nama kiriman klien', function () {
-    $sri = Pengguna::factory()->create();
+    $sri = Pengguna::factory()->pembeli()->create();
     $orangLain = Pengguna::factory()->create();
 
     $slug = $this->sebagai($sri)->postJson('/api/v1/toko-saya', [
@@ -60,7 +60,7 @@ it('membuka toko atas nama pengguna sesi, bukan atas nama kiriman klien', functi
 });
 
 it('menolak toko kedua untuk pengguna yang sama (LP-3)', function () {
-    $sri = Pengguna::factory()->create();
+    $sri = Pengguna::factory()->penjual()->create();
     Toko::factory()->for($sri, 'pemilik')->create();
 
     $this->sebagai($sri)->postJson('/api/v1/toko-saya', [
@@ -87,7 +87,7 @@ it('mengubah hanya kolom yang dikirim, dan hanya pada toko sendiri', function ()
 });
 
 it('menolak ongkir pecahan atau negatif (LP-1)', function (mixed $ongkir) {
-    $this->sebagai(Pengguna::factory()->create())->postJson('/api/v1/toko-saya', [
+    $this->sebagai(Pengguna::factory()->pembeli()->create())->postJson('/api/v1/toko-saya', [
         'nama' => 'Toko Uji', 'kota' => 'Surakarta', 'ongkir_rupiah' => $ongkir,
     ])
         ->assertUnprocessable()
@@ -97,3 +97,23 @@ it('menolak ongkir pecahan atau negatif (LP-1)', function (mixed $ongkir) {
     'negatif' => [-1],
     'teks berformat' => ['12.000'],
 ]);
+
+it('menolak pembukaan toko oleh akun yang tidak memegang izin toko.buka', function (string $pemegang) {
+    $this->sebagai(Pengguna::factory()->{$pemegang}()->create())->postJson('/api/v1/toko-saya', [
+        'nama' => 'Toko Staf', 'kota' => 'Surakarta', 'ongkir_rupiah' => 10_000,
+    ])
+        ->assertForbidden()
+        ->assertJsonPath('galat.kode', 'DITOLAK');
+
+    expect(Toko::count())->toBe(0);
+})->with(['admin', 'keuangan', 'auditor']);
+
+it('membolehkan pemilik toko yang masih menunggu membenahi datanya', function () {
+    $tini = Pengguna::factory()->pembeli()->create();
+    Toko::factory()->menunggu()->for($tini, 'pemilik')->create();
+
+    $this->sebagai($tini)->patchJson('/api/v1/toko-saya', ['kota' => 'Karanganyar'])
+        ->assertOk()
+        ->assertJsonPath('data.kota', 'Karanganyar')
+        ->assertJsonPath('data.status', 'menunggu');
+});

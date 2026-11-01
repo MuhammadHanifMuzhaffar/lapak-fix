@@ -12,4 +12,10 @@ enum StatusPesanan: string
     case Dikirim = 'dikirim';
     case Selesai = 'selesai';
     case Dibatalkan = 'dibatalkan';
+
+    /** Status akhir tidak memiliki jalan keluar bagi siapa pun. */
+    public function akhir(): bool
+    {
+        return $this === self::Selesai || $this === self::Dibatalkan;
+    }
 }

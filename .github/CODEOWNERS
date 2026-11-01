@@ -1,4 +1,4 @@
-# Alokasi Kepemilikan Berkas Kode Sesi 3
+# Alokasi Kepemilikan Berkas Kode Sesi 4
 /config/auth.php                              @MuhammadHanifMuzhaffar
 /app/Models/Sesi.php                          @MuhammadHanifMuzhaffar
 /app/Services/PenerbitSesi.php                @MuhammadHanifMuzhaffar
@@ -11,6 +11,10 @@
 /app/Policies/PenggunaPolicy.php              @MuhammadHanifMuzhaffar
 /app/Console/Commands/BeriPeran.php           @MuhammadHanifMuzhaffar
 /database/factories/PenggunaFactory.php       @MuhammadHanifMuzhaffar
+/app/Models/Alamat.php                        @MuhammadHanifMuzhaffar
+/app/Services/BukuAlamat.php                  @MuhammadHanifMuzhaffar
+/app/Services/PenjagaTransaksi.php            @MuhammadHanifMuzhaffar
+/app/Http/Controllers/AlamatController.php    @MuhammadHanifMuzhaffar
 
 /app/Http/Controllers/KatalogController.php   @NimatulAzizahh
 /app/Http/Controllers/TokoSayaController.php  @NimatulAzizahh
@@ -20,17 +24,35 @@
 /app/Services/ModerasiToko.php                @NimatulAzizahh
 /app/Http/Controllers/ModerasiTokoController.php @NimatulAzizahh
 /app/Policies/TokoPolicy.php                  @NimatulAzizahh
+/app/Services/PenjagaStok.php                 @NimatulAzizahh
 
 /app/Services/PenyusunBelanja.php             @NovendraAnggoroAdjiNugroho
 /app/Services/LayananKeranjang.php            @NovendraAnggoroAdjiNugroho
 /app/Http/Controllers/KeranjangController.php @NovendraAnggoroAdjiNugroho
 /routes/api/belanja.php                       @NovendraAnggoroAdjiNugroho
+/tests/Feature/Belanja/                       @NovendraAnggoroAdjiNugroho
+/app/Models/Checkout.php                      @NovendraAnggoroAdjiNugroho
+/app/Models/Pesanan.php                       @NovendraAnggoroAdjiNugroho
+/app/Models/ButirPesanan.php                  @NovendraAnggoroAdjiNugroho
+/app/Services/GembokCheckout.php              @NovendraAnggoroAdjiNugroho
+/app/Services/MesinStatusPesanan.php          @NovendraAnggoroAdjiNugroho
+/app/Services/LayananCheckout.php             @NovendraAnggoroAdjiNugroho
+/app/Services/PembatalanOtomatis.php          @NovendraAnggoroAdjiNugroho
+/app/Http/Controllers/CheckoutController.php  @NovendraAnggoroAdjiNugroho
+/app/Http/Controllers/PesananSayaController.php @NovendraAnggoroAdjiNugroho
+/app/Console/Commands/BatalkanKedaluwarsa.php @NovendraAnggoroAdjiNugroho
 
 /app/Console/Commands/PeriksaBuku.php         @KaishanAryaSetiko
 /app/Http/Controllers/DompetController.php    @KaishanAryaSetiko
 /routes/api/dompet.php                        @KaishanAryaSetiko
 /tests/Feature/Dompet/                        @KaishanAryaSetiko
 /app/Http/Controllers/BukuBesarController.php @KaishanAryaSetiko
+/app/Models/Pembayaran.php                    @KaishanAryaSetiko
+/app/Services/LayananPembayaran.php           @KaishanAryaSetiko
+/app/Services/TandaTanganGateway.php          @KaishanAryaSetiko
+/app/Http/Controllers/WebhookPembayaranController.php @KaishanAryaSetiko
+/app/Http/Controllers/PembayaranSayaController.php @KaishanAryaSetiko
+/app/Console/Commands/SimulasiBayar.php       @KaishanAryaSetiko
 
 /routes/api/sistem.php                        @ZidniiAghniyaRajwa
 /routes/console.php                           @ZidniiAghniyaRajwa
@@ -47,6 +69,15 @@
 /app/Services/PemeriksaIzin.php               @ZidniiAghniyaRajwa
 /app/Console/Commands/MatriksIzin.php         @ZidniiAghniyaRajwa
 /database/seeders/PeranIzinSeeder.php         @ZidniiAghniyaRajwa
+/app/Models/KunciIdempotensi.php              @ZidniiAghniyaRajwa
+/app/Console/Commands/Balapan.php             @ZidniiAghniyaRajwa
+/app/Console/Commands/BalapanAnak.php         @ZidniiAghniyaRajwa
+/app/Balapan/                                 @ZidniiAghniyaRajwa
 
-# Pengecualian: pola paling akhir menang
+# Pengecualian domain
 /app/Domain/Sesi/                             @MuhammadHanifMuzhaffar
+/app/Balapan/AlamatPertama.php                @MuhammadHanifMuzhaffar
+/app/Balapan/RebutanStok.php                  @NimatulAzizahh
+/app/Balapan/PenyesuaianStok.php              @NimatulAzizahh
+/app/Balapan/KeranjangGanda.php               @NovendraAnggoroAdjiNugroho
+/app/Balapan/WebhookGanda.php                 @KaishanAryaSetiko

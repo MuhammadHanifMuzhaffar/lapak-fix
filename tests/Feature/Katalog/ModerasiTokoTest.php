@@ -1,11 +1,15 @@
 <?php
 
+use App\Enums\NamaPeran;
 use App\Enums\StatusToko;
+use App\Exceptions\TransisiTokoTidakSah;
 use App\Models\Pengguna;
 use App\Models\Produk;
 use App\Models\Toko;
+use App\Services\ModerasiToko;
 use App\Services\PenerbitSesi;
 use App\Services\PengelolaPeran;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->admin = Pengguna::factory()->admin()->create();
@@ -62,10 +66,40 @@ it('menangguhkan toko dengan alasan, tanpa mencabut peran dan sesi pemiliknya', 
     $this->tanpaKunci()->getJson('/api/v1/produk')->assertJsonCount(0, 'data');
 });
 
-it('menolak memoderasi toko sendiri', function () {
-    $tokoAdmin = Toko::factory()->menunggu()->for($this->admin, 'pemilik')->create();
+it('melarang admin memoderasi tokonya sendiri', function () {
+    $adminBerjualan = Pengguna::factory()->denganPeran(NamaPeran::Admin, NamaPeran::Pembeli)->create();
+    $tokoSendiri = Toko::factory()->menunggu()->for($adminBerjualan, 'pemilik')->create();
 
-    $this->sebagai($this->admin)->postJson("/api/v1/admin/toko/{$tokoAdmin->id}/setujui")
+    $this->sebagai($adminBerjualan)->postJson("/api/v1/admin/toko/{$tokoSendiri->id}/setujui")
         ->assertForbidden()
         ->assertJsonPath('galat.kode', 'DITOLAK');
+
+    expect($tokoSendiri->refresh()->status)->toBe(StatusToko::Menunggu)
+        ->and($adminBerjualan->punyaPeran(NamaPeran::Penjual))->toBeFalse();
+
+    // Admin lain boleh.
+    $this->sebagai($this->admin)->postJson("/api/v1/admin/toko/{$tokoSendiri->id}/setujui")->assertOk();
+});
+
+it('hanya mengubah satu kali bila dua admin menyetujui toko yang sama', function () {
+    $adminKedua = Pengguna::factory()->admin()->create();
+
+    $salinanPertama = Toko::query()->findOrFail($this->tokoTini->id);
+    $salinanKedua = Toko::query()->findOrFail($this->tokoTini->id);
+
+    app(ModerasiToko::class)->setujui($salinanPertama, $this->admin);
+
+    expect($salinanKedua->status)->toBe(StatusToko::Menunggu)
+        ->and(fn () => app(ModerasiToko::class)->setujui($salinanKedua, $adminKedua))
+        ->toThrow(TransisiTokoTidakSah::class)
+        ->and($this->tokoTini->refresh()->dimoderasi_oleh)->toBe($this->admin->id);
+});
+
+it('tidak mengubah status bila pemberian peran gagal', function () {
+    DB::table('peran')->delete();
+
+    expect(fn () => app(ModerasiToko::class)->setujui($this->tokoTini, $this->admin))
+        ->toThrow(LogicException::class);
+
+    expect($this->tokoTini->refresh()->status)->toBe(StatusToko::Menunggu);
 });
