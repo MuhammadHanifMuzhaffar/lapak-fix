@@ -2,21 +2,18 @@
 
 use App\Http\Controllers\BukuBesarController;
 use App\Http\Controllers\DompetController;
+use App\Http\Controllers\PembayaranSayaController;
+use App\Http\Controllers\WebhookPembayaranController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sesi', 'izin:dompet.lihat'])->group(function (): void {
-    Route::get('dompet', [DompetController::class, 'show'])->name('dompet.show');
+Route::post('/webhook/pembayaran', WebhookPembayaranController::class);
 
-    Route::get('dompet/mutasi', [DompetController::class, 'mutasi'])
-        ->middleware('sesi.segar')
-        ->name('dompet.mutasi');
+Route::middleware(['api', 'auth:sesi'])->group(function () {
+    Route::get('/dompet', [DompetController::class, 'saldo']);
+    Route::get('/dompet/mutasi', [DompetController::class, 'mutasi']);
+
+    Route::get('/pembayaran-saya/{nomorPesanan}', [PembayaranSayaController::class, 'show']);
+
+    Route::get('/buku-besar/dompet', [BukuBesarController::class, 'daftarDompet']);
+    Route::get('/buku-besar/mutasi', [BukuBesarController::class, 'mutasi']);
 });
-
-Route::middleware(['auth:sesi', 'izin:buku-besar.lihat', 'sesi.segar'])
-    ->prefix('buku-besar')
-    ->name('buku-besar.')
-    ->whereNumber('id')
-    ->group(function (): void {
-        Route::get('dompet', [BukuBesarController::class, 'index'])->name('dompet.index');
-        Route::get('dompet/{id}/mutasi', [BukuBesarController::class, 'mutasi'])->name('dompet.mutasi');
-    });
