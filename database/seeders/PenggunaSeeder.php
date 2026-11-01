@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Enums\NamaPeran;
 use App\Models\Pengguna;
+use App\Services\PengelolaPeran;
 use Illuminate\Database\Seeder;
 
 class PenggunaSeeder extends Seeder
 {
-    /** Kata sandi akun contoh. Hanya untuk mesin pengembangan. */
     public const SANDI_CONTOH = 'LapakContoh#2026';
 
     private const AKUN = [
@@ -15,26 +16,33 @@ class PenggunaSeeder extends Seeder
         ['Staf Keuangan', 'keuangan@lapak.test'],
         ['Auditor Internal', 'auditor@lapak.test'],
         ['Sri Wahyuni', 'sri@lapak.test'],
-        ['Wulan Sari', 'wulan@lapak.test'],
-        ['Eko Prasetyo', 'eko@lapak.test'],
         ['Tini Lestari', 'tini@lapak.test'],
-        ['Andi Nugroho', 'andi@lapak.test'],
-        ['Dewi Anggraini', 'dewi@lapak.test'],
+        ['Andi Prasetyo', 'andi@lapak.test'],
+        ['Budi Santoso', 'budi@lapak.test'],
+        ['Citra Dewi', 'citra@lapak.test'],
     ];
 
-    public function run(): void
+    public function run(PengelolaPeran $peran): void
     {
-        if (app()->isProduction()) {
-            $this->command?->warn('PenggunaSeeder dilewati: akun contoh tidak boleh ada di produksi.');
-
-            return;
-        }
+        $dibuat = [];
 
         foreach (self::AKUN as [$nama, $surel]) {
-            Pengguna::updateOrCreate(
+            $dibuat[$surel] = Pengguna::firstOrCreate(
                 ['surel' => $surel],
-                ['nama' => $nama, 'kata_sandi' => self::SANDI_CONTOH],
+                [
+                    'nama' => $nama,
+                    'telepon' => '08'.fake()->unique()->numerify('##########'),
+                    'kata_sandi' => self::SANDI_CONTOH,
+                ],
             );
+        }
+
+        $peran->beri($dibuat['admin@lapak.test'], NamaPeran::Admin);
+        $peran->beri($dibuat['keuangan@lapak.test'], NamaPeran::Keuangan);
+        $peran->beri($dibuat['auditor@lapak.test'], NamaPeran::Auditor);
+
+        foreach (['sri@lapak.test', 'tini@lapak.test', 'andi@lapak.test', 'budi@lapak.test', 'citra@lapak.test'] as $surel) {
+            $peran->beri($dibuat[$surel], NamaPeran::Pembeli);
         }
     }
 }
