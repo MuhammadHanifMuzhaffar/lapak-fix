@@ -36,3 +36,19 @@ Seluruh endpoint REST API Lapak wajib mematuhi struktur amplop respons JSON terp
 | `OTORISASI` | 403 Forbidden | Akun tidak memiliki peran/izin untuk tindakan ini (LP-2). |
 | `TIDAK_TERAUTENTIKASI` | 401 Unauthorized | Kunci sesi tidak ada, kedaluwarsa, atau dicabut (Sesi 2). |
 | `SERVER_ERROR` | 500 Internal Server Error | Kesalahan tak terduga di server. Rincian internal disembunyikan saat produksi. |
+
+## Idempotensi 
+  
+- Setiap permintaan yang mengubah uang atau stok wajib membawa header `Idempotency-Key` (LP-11): 
+
+  16 sampai 64 huruf, angka, garis bawah, atau tanda hubung. UUID memenuhi syarat ini. 
+- Klien membuat SATU kunci untuk satu niat, misalnya satu kali menekan tombol bayar, dan memakai 
+  kunci yang sama setiap kali mengulang permintaan itu karena jaringan putus atau batas waktu habis. 
+- Permintaan pertama yang berhasil (2xx) dicatat bersama responsnya. Pengulangan dengan kunci dan 
+  badan yang sama menerima respons yang sama, ditandai header `Idempotency-Replayed: true`, dan 
+  tidak berefek lagi. 
+- Permintaan yang gagal tidak meninggalkan catatan. Setelah sebabnya dibetulkan, kunci yang sama 
+  boleh dipakai lagi. 
+- Kunci yang sama dengan badan yang berbeda dijawab 422 `LP-11`. Kunci berlaku per pengguna. 
+- Catatan kunci dan seluruh perubahan data berada dalam satu transaksi basis data. Rute yang 
+  memasang `idempoten` karenanya tidak boleh memanggil layanan luar di dalam controller-nya.
