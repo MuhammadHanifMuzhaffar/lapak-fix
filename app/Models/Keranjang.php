@@ -12,7 +12,7 @@ final class Keranjang extends Model
 {
     protected $table = 'keranjang';
 
-    protected $fillable = [];
+    protected $fillable = ['pengguna_id'];
 
     /** @return BelongsTo<Pengguna, $this> */
     public function pengguna(): BelongsTo

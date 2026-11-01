@@ -43,11 +43,12 @@ final class KunciGanda implements SkenarioBalapan
 
         [$sesi, $kunci] = app(PenerbitSesi::class)->terbitkan($pembeli, 'Uji Kunci Ganda');
 
-        $this->panggil('PUT', "/api/v1/keranjang/butir/{$produk->id}", ['kuantitas' => 2], [
-            'Authorization' => "Bearer {$kunci}",
-        ]);
-
-        $keranjang = Keranjang::query()->firstOrCreate(['pengguna_id' => $pembeli->id]);
+        $keranjang = Keranjang::query()->where('pengguna_id', $pembeli->id)->first();
+        if ($keranjang === null) {
+            $keranjang = new Keranjang;
+            $keranjang->pengguna_id = $pembeli->id;
+            $keranjang->save();
+        }
         $keranjang->butir()->updateOrCreate(['produk_id' => $produk->id], ['kuantitas' => 2]);
 
         return [
