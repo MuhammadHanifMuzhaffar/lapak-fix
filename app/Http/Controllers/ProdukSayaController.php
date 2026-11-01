@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\StatusProduk;
+use App\Http\Requests\PenyesuaianStokRequest;
 use App\Http\Requests\ProdukSayaRequest;
 use App\Http\Resources\ProdukSayaResource;
 use App\Models\Produk;
 use App\Models\Toko;
+use App\Services\PenjagaStok;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -18,12 +20,14 @@ final class ProdukSayaController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $halaman = $this->tokoSaya($request)
-            ->produk()
-            ->orderByDesc('id')
-            ->paginate(config('lapak.katalog.per_halaman_bawaan'), ['*'], 'halaman');
+        $toko = $this->tokoSaya($request);
+        $produk = Produk::query()
+            ->where('toko_id', $toko->id)
+            ->with('kategori')
+            ->latest('id')
+            ->paginate((int) config('lapak.katalog.per_halaman_bawaan'));
 
-        return $this->berhalaman($halaman, ProdukSayaResource::class);
+        return $this->berhalaman($produk, ProdukSayaResource::class);
     }
 
     public function store(ProdukSayaRequest $request): JsonResponse
@@ -37,7 +41,14 @@ final class ProdukSayaController extends Controller
         $produk->status = StatusProduk::from($data['status'] ?? StatusProduk::Draf->value);
         $produk->save();
 
-        return $this->sukses(ProdukSayaResource::make($produk->refresh()), 201);
+        return $this->sukses(ProdukSayaResource::make($produk->refresh()->load('kategori')), 201);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $produk = $this->produkSaya($request, $id);
+
+        return $this->sukses(ProdukSayaResource::make($produk->load('kategori')));
     }
 
     public function update(ProdukSayaRequest $request, int $id): JsonResponse
@@ -51,7 +62,7 @@ final class ProdukSayaController extends Controller
         }
         $produk->save();
 
-        return $this->sukses(ProdukSayaResource::make($produk));
+        return $this->sukses(ProdukSayaResource::make($produk->load('kategori')));
     }
 
     public function destroy(Request $request, int $id): JsonResponse
@@ -63,13 +74,25 @@ final class ProdukSayaController extends Controller
         return $this->sukses(ProdukSayaResource::make($produk));
     }
 
+    public function stok(PenyesuaianStokRequest $request, PenjagaStok $stok, int $id): JsonResponse
+    {
+        $produk = $this->produkSaya($request, $id);
+
+        return $this->sukses(ProdukSayaResource::make(
+            $stok->sesuaikan($produk->id, $request->integer('selisih')),
+        ));
+    }
+
     private function tokoSaya(Request $request): Toko
     {
-        return Toko::query()->milik($request->user())->firstOrFail();
+        return Toko::query()->where('pemilik_id', $request->user()->id)->firstOrFail();
     }
 
     private function produkSaya(Request $request, int $id): Produk
     {
-        return $this->tokoSaya($request)->produk()->findOrFail($id);
+        return Produk::query()
+            ->where('id', $id)
+            ->where('toko_id', $this->tokoSaya($request)->id)
+            ->firstOrFail();
     }
 }
