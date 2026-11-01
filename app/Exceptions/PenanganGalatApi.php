@@ -15,44 +15,44 @@ use Throwable;
 final class PenanganGalatApi
 {
     private const PESAN_HTTP = [
+        400 => ['BAD_REQUEST', 'Format permintaan tidak dapat dipahami server.'],
         401 => ['BELUM_MASUK', 'Anda belum masuk atau sesi tidak berlaku.'],
-        403 => ['DITOLAK', 'Anda tidak berwenang melakukan tindakan ini.'],
-        404 => ['TIDAK_DITEMUKAN', 'Sumber daya tidak ditemukan.'],
-        405 => ['METODE_TIDAK_DIIZINKAN', 'Metode HTTP tidak diizinkan pada alamat ini.'],
-        429 => ['TERLALU_SERING', 'Terlalu banyak permintaan. Coba lagi sebentar.'],
+        403 => ['DITOLAK', 'Anda tidak memiliki hak untuk melakukan tindakan ini.'],
+        404 => ['TIDAK_DITEMUKAN', 'Data atau alamat yang diminta tidak ditemukan.'],
+        405 => ['METODE_DITOLAK', 'Metode HTTP tidak diizinkan untuk alamat ini.'],
+        429 => ['TERLALU_SERING', 'Terlalu banyak permintaan. Coba lagi beberapa saat.'],
     ];
 
-    private const PESAN_HTTP_LAIN = ['GALAT_HTTP', 'Permintaan tidak dapat diproses.'];
+    private const PESAN_HTTP_LAIN = ['GALAT_KLIEN', 'Permintaan tidak dapat diproses.'];
 
     public static function daftarkan(Exceptions $exceptions): void
     {
-        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*'));
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request, Throwable $e) => $request->is('api/*') || $request->expectsJson()
+        );
 
         $exceptions->render(function (Throwable $galat, Request $request): ?JsonResponse {
-            return $request->is('api/*') ? self::ubah($galat) : null;
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
+                return null;
+            }
+
+            return self::ubahMenjadiRespons($galat);
         });
     }
 
-    private static function ubah(Throwable $galat): JsonResponse
+    public static function ubahMenjadiRespons(Throwable $galat): JsonResponse
     {
         return match (true) {
-            $galat instanceof GalatDomain => self::bentuk(
-                $galat->statusHttp,
-                $galat->kode,
-                $galat->getMessage(),
-                $galat->rincian,
-            ),
+            $galat instanceof GalatDomain => self::bentuk($galat->statusHttp, $galat->kode, $galat->getMessage(), $galat->rincian),
             $galat instanceof ValidationException => self::bentuk(
-                422,
-                'VALIDASI',
-                'Data yang dikirim tidak memenuhi syarat.',
-                $galat->errors(),
+                422, 'VALIDASI', 'Data yang dikirim tidak memenuhi syarat.', $galat->errors(),
             ),
-            $galat instanceof AuthenticationException => self::bentuk(401, ...self::PESAN_HTTP[401]),
+            $galat instanceof AuthenticationException => self::bentuk(401, ...self::PESAN_HTTP[401])
+                ->header('WWW-Authenticate', 'Bearer'),
             $galat instanceof HttpExceptionInterface => self::bentuk(
                 $galat->getStatusCode(),
                 ...(self::PESAN_HTTP[$galat->getStatusCode()] ?? self::PESAN_HTTP_LAIN),
-            ),
+            )->withHeaders($galat->getHeaders()),
             default => self::bentuk(
                 500,
                 'GALAT_SERVER',
@@ -62,9 +62,6 @@ final class PenanganGalatApi
         };
     }
 
-    /**
-     * @param  array<string, mixed>  $rincian
-     */
     private static function bentuk(
         int $status,
         string $kode,
