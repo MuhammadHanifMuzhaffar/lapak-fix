@@ -1,23 +1,21 @@
-# Tujuh Belas Aturan Bisnis Lapak
+# Penegakan Aturan Bisnis Lapak (LP-1 sampai LP-17)
 
-Setiap aturan memiliki kode unik agar dapat dirujuk secara konsisten pada kode sumber, respons galat, kasus pengujian, dan judul Pull Request.
-
-| Kode | Nama Aturan | Ringkasan Kebijakan | Tempat Penegakan |
-|---|---|---|---|
-| LP-1 | Bilangan Bulat Rupiah | Seluruh nilai uang adalah integer rupiah. Tipe pecahan dilarang di basis data, kode, dan JSON. | Value Object `App\Domain\Uang` |
-| LP-2 | Izin Berbasis Peran | Kewenangan ditentukan izin yang melekat pada peran, bukan nama peran. Satu akun boleh banyak peran. | `NamaPeran::izinBawaan`, `PemeriksaIzin`, middleware `izin`, `PengelolaPeran`, `MatriksOtorisasiTest` |
-| LP-3 | Satu Pengguna Satu Toko | Satu akun maksimal memiliki satu toko. Toko baru berstatus menunggu sampai disetujui admin. | `unique` pada `toko.pemilik_id`, izin `toko.buka`, `ModerasiToko`, `TokoPolicy` |
-| LP-4 | Scope Tampil Produk | Produk hanya tampil jika berstatus aktif, tokonya aktif, dan stok mencukupi (> 0). | `App\Models\Produk::scopeTampil()` |
-| LP-5 | Larangan Beli Sendiri | Penjual tidak dapat membeli produk dari tokonya sendiri. | `PenyusunBelanja::pilah`, `LayananKeranjang::aturButir` |
-| LP-6 | Perhitungan Server-Side | Harga, ongkir, dan total dihitung server dari basis data. Angka kiriman klien diabaikan. | `SimulasiBelanjaRequest`, `PenyusunBelanja`, `LayananKeranjang::lihat` |
-| LP-7 | Pemisahan per Toko | Satu checkout menghasilkan satu pesanan per toko dan dibayar dengan satu pembayaran. | `App\Domain\Belanja\PenghitungBelanja` |
-| LP-8 | Komisi Marketplace | Komisi 5% dari subtotal produk (dibulatkan setengah ke atas), dipotong dari bagian penjual. Ongkir milik penjual. | `config/lapak.php`, `App\Domain\Belanja\PenghitungBelanja` |
-| LP-9 | Format Nomor Pesanan | Nomor pesanan berformat `LPK-YYYYMMDD-NNNNNN` dan unik seumur hidup sistem. | Sesi 4 |
-| LP-10 | Siklus Hidup Pesanan | Daur hidup: Menunggu Pembayaran -> Dibayar -> Dikemas -> Dikirim -> Selesai. | `App\Domain\Pesanan\AturanTransisi`, Sesi 4 |
-| LP-11 | Idempotensi Transaksi | Setiap permintaan yang mengubah uang atau stok wajib membawa header `Idempotency-Key`. | Sesi 4 |
-| LP-12 | Penahanan Dana (Escrow) | Dana ditahan di escrow dan dilepas setelah pembeli konfirmasi atau 3 hari setelah dikirim. | `config/lapak.php`, Sesi 4 |
-| LP-13 | Mutasi Berpasangan | Saldo hanya berubah lewat pemindahan antardompet dengan sepasang mutasi bernilai nol. Mutasi append-only. | `App\Services\BukuBesar` |
-| LP-14 | Keamanan Sesi Token | Kunci sesi ditampilkan sekali dan disimpan sebagai hash. Berlaku 7 hari, timeout 2 jam tidak aktif. | `KunciSesi`, `PenerbitSesi`, `Sesi::scopeBerlaku`, `lapak:pangkas-sesi` |
-| LP-15 | Sesi Segar | Tindakan sensitif menuntut kata sandi dikonfirmasi ulang dalam 10 menit terakhir. | `SesiSegar`, `SesiController::konfirmasi` (cabut sesi, riwayat mutasi, perubahan peran, keputusan moderasi, buku besar) |
-| LP-16 | Batas Pencairan Saldo | Pencairan minimal Rp 50.000, disetujui peran keuangan, pengaju dan penyetuju tidak boleh sama. | `config/lapak.php`, Sesi 4 |
-| LP-17 | Jejak Audit Tak Terbantahkan | Tindakan sensitif dicatat pada log audit append-only dengan rantai hash SHA-256. | Sesi 4 & 5 |
+| Kode | Aturan | Ditegakkan di |
+|---|---|---|
+| LP-1 | Bilangan bulat positif untuk uang dan stok | AturanValidasi, Uang value object, migration unsignedInteger |
+| LP-2 | Izin berbasis peran | Enum NamaIzin, NamaPeran, middleware izin, PengelolaPeran |
+| LP-3 | Moderasi toko oleh admin | ModerasiToko, TokoPolicy, TransisiTokoTidakSah |
+| LP-4 | Visibilitas produk dan stok penjual | Produk::scopeTampil, PenyusunBelanja, PenjagaStok, PenyesuaianStok |
+| LP-5 | Larangan membeli barang toko sendiri | PenyusunBelanja::pilah, LayananKeranjang::aturButir, LayananCheckout |
+| LP-6 | Pembekuan harga dan nama produk | SimulasiBelanjaRequest, PenyusunBelanja, CheckoutRequest, kolom butir_pesanan |
+| LP-7 | Hubungan checkout dan pembayaran | PenghitungBelanja, LayananCheckout, unique pada pembayaran.checkout_id |
+| LP-8 | Pemotongan saldo dompet penjual | BukuBesar::pindahkan, verifikasi saldo mencukupi |
+| LP-9 | Format nomor pesanan unik | PenomorPesanan (LPK-YYYYMMDD-NNNNNN), unique pada pesanan.nomor |
+| LP-10 | Daur hidup pesanan | AturanTransisi, MesinStatusPesanan, PembatalanOtomatis |
+| LP-11 | Idempotensi permintaan bermutasi | Middleware idempoten, kunci_idempotensi, RuteIdempotenTest |
+| LP-12 | Dana tertahan di escrow | LayananPembayaran::terima, BukuBesar dana masuk escrow |
+| LP-13 | Invarian buku besar ganda | BukuBesar, MutasiSaldo, lapak:periksa-buku |
+| LP-14 | Masa hidup sesi dan pencabutan token | PemeriksaSesi, Sesi model scopeBerlaku |
+| LP-15 | Sesi segar dan batas laju transaksi | SesiSegar middleware, PenjagaTransaksi ambang_segar_rupiah |
+| LP-16 | Manajemen peran mencabut sesi | PengelolaPeran::beri, cabut, cabutSemua sesi aktif |
+| LP-17 | Kebijakan akses rute seragam | MatriksOtorisasiTest, 156 rute terlindung RBAC |
