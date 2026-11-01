@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('lapak:pangkas-sesi')->dailyAt('03:15');
+
+Schedule::command('lapak:batalkan-kedaluwarsa')->everyMinute();
