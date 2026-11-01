@@ -8,34 +8,30 @@ use App\Domain\Pesanan\PelakuPesanan;
 use App\Domain\Pesanan\StatusPesanan;
 use App\Models\Checkout;
 use App\Models\Pembayaran;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 final class PembatalanOtomatis
 {
-    public const ALASAN = 'Tidak dibayar sampai batas waktu';
-
     public function __construct(
         private readonly GembokCheckout $gembok,
-        private readonly LayananPembayaran $pembayaran,
         private readonly MesinStatusPesanan $mesin,
         private readonly PenjagaStok $stok,
     ) {}
 
-    /** @return int jumlah checkout yang dibatalkan */
-    public function jalankan(): int
+    public function batalkan(Checkout $checkout): bool
     {
-        $dibatalkan = 0;
+        return $this->gembok->kunci($checkout, function (Checkout $checkout): bool {
+            $pembayaran = Pembayaran::query()
+                ->where('checkout_id', $checkout->id)
+                ->lockForUpdate()
+                ->first();
 
-        foreach (Pembayaran::query()->lewatBatas()->orderBy('id')->pluck('checkout_id') as $id) {
-            $dibatalkan += $this->batalkan($id) ? 1 : 0;
-        }
+            if ($pembayaran === null || Carbon::parse($pembayaran->batas_bayar_pada)->isFuture()) {
+                return false;
+            }
 
-        return $dibatalkan;
-    }
-
-    public function batalkan(int $idCheckout): bool
-    {
-        return $this->gembok->dalam($idCheckout, function (Checkout $checkout): bool {
-            if (! $this->pembayaran->tandaiKedaluwarsa($checkout)) {
+            if ($pembayaran->status->selesai()) {
                 return false;
             }
 
@@ -46,7 +42,7 @@ final class PembatalanOtomatis
                     $pesanan,
                     StatusPesanan::Dibatalkan,
                     PelakuPesanan::Sistem,
-                    self::ALASAN,
+                    'Batas waktu pembayaran habis.',
                 );
 
                 foreach ($pesanan->butir as $butir) {
@@ -55,6 +51,9 @@ final class PembatalanOtomatis
                 }
             }
 
+            // Urutan kunci tim (docs/PETA-SKEMA.md): seluruh pesanan dulu, lalu produk urut nomor
+            // menaik. Checkout mengunci produk dengan urutan yang sama. Bila di sini stok
+            // dikembalikan menurut urutan butir, keduanya dapat saling menunggu selamanya.
             ksort($kembali);
 
             foreach ($kembali as $idProduk => $kuantitas) {
@@ -63,5 +62,23 @@ final class PembatalanOtomatis
 
             return true;
         });
+    }
+
+    public function sapuSemua(): int
+    {
+        $kedaluwarsa = Pembayaran::query()
+            ->where('batas_bayar_pada', '<=', now())
+            ->whereNotIn('status', ['lunas', 'batal'])
+            ->pluck('checkout_id');
+
+        $jumlah = 0;
+        foreach ($kedaluwarsa as $id) {
+            $checkout = Checkout::find($id);
+            if ($checkout && $this->batalkan($checkout)) {
+                $jumlah++;
+            }
+        }
+
+        return $jumlah;
     }
 }
