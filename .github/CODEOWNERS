@@ -1,0 +1,34 @@
+# Alokasi Kepemilikan Berkas Kode Sesi 2
+/config/auth.php                              @MuhammadHanifMuzhaffar
+/app/Models/Sesi.php                          @MuhammadHanifMuzhaffar
+/app/Services/PenerbitSesi.php                @MuhammadHanifMuzhaffar
+/app/Services/PemeriksaSesi.php               @MuhammadHanifMuzhaffar
+/app/Services/PemeriksaKataSandi.php          @MuhammadHanifMuzhaffar
+/app/Http/Controllers/MasukController.php     @MuhammadHanifMuzhaffar
+/app/Http/Controllers/SesiController.php      @MuhammadHanifMuzhaffar
+
+/app/Http/Controllers/KatalogController.php   @NimatulAzizahh
+/app/Http/Controllers/TokoSayaController.php  @NimatulAzizahh
+/app/Http/Controllers/ProdukSayaController.php @NimatulAzizahh
+/routes/api/katalog.php                       @NimatulAzizahh
+
+/app/Services/PenyusunBelanja.php             @NovendraAnggoroAdjiNugroho
+/app/Services/LayananKeranjang.php            @NovendraAnggoroAdjiNugroho
+/app/Http/Controllers/KeranjangController.php @NovendraAnggoroAdjiNugroho
+/routes/api/belanja.php                       @NovendraAnggoroAdjiNugroho
+
+/app/Console/Commands/PeriksaBuku.php         @KaishanAryaSetiko
+/app/Http/Controllers/DompetController.php    @KaishanAryaSetiko
+/routes/api/dompet.php                        @KaishanAryaSetiko
+/tests/Feature/Dompet/                        @KaishanAryaSetiko
+
+/routes/api/sistem.php                        @ZidniiAghniyaRajwa
+/routes/console.php                           @ZidniiAghniyaRajwa
+/tests/TestCase.php                           @ZidniiAghniyaRajwa
+/tests/Pest.php                               @ZidniiAghniyaRajwa
+/app/Console/Commands/PangkasSesi.php         @ZidniiAghniyaRajwa
+/config/lapak.php                             @ZidniiAghniyaRajwa
+/database/seeders/DatabaseSeeder.php          @ZidniiAghniyaRajwa
+
+# Pengecualian: pola paling akhir menang
+/app/Domain/Sesi/                             @MuhammadHanifMuzhaffar
