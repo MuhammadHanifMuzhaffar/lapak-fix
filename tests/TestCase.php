@@ -5,10 +5,15 @@ namespace Tests;
 use App\Models\Pengguna;
 use App\Models\Sesi;
 use App\Services\PenerbitSesi;
+use Database\Seeders\PeranIzinSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected $seed = true;
+
+    protected $seeder = PeranIzinSeeder::class;
+
     protected ?Sesi $sesiUji = null;
 
     protected function sebagai(Pengguna $pengguna, bool $segar = true): static
