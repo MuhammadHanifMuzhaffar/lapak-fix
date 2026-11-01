@@ -31,12 +31,18 @@ class Toko extends Model
         return [
             'status' => StatusToko::class,
             'ongkir_rupiah' => 'integer',
+            'dimoderasi_pada' => 'datetime',
         ];
     }
 
     public function pemilik(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'pemilik_id');
+    }
+
+    public function pemoderasi(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'dimoderasi_oleh');
     }
 
     public function produk(): HasMany
