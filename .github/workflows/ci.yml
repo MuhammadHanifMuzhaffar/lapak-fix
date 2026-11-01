@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  kualitas:
+    name: kualitas
+    runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: sqlite
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_sqlite
+          coverage: none
+
+      - name: Pasang dependensi
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Siapkan lingkungan
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+
+      - name: Gaya kode
+        run: php vendor/bin/pint --test
+
+      - name: Migrasi dan seeder dari basis data kosong
+        run: php artisan migrate:fresh --seed --force
+
+      - name: Buku besar seimbang
+        run: php artisan lapak:periksa-buku
+
+      - name: Pengujian
+        run: php vendor/bin/pest --ci
