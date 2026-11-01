@@ -12,28 +12,28 @@ enum NamaPeran: string
     case Keuangan = 'keuangan';
     case Auditor = 'auditor';
 
-    public function keterangan(): string
+    public function daftarIzin(): array
     {
         return match ($this) {
-            self::Pembeli => 'Berbelanja dan mengajukan pembukaan toko',
-            self::Penjual => 'Mengelola produk dan melihat dompet tokonya',
-            self::Admin => 'Memoderasi toko dan mengelola peran pengguna',
-            self::Keuangan => 'Membaca buku besar; menyetujui pencairan mulai Sesi 5',
-            self::Auditor => 'Membaca buku besar tanpa hak tulis apa pun',
-        };
-    }
-
-    /**
-     * @return list<NamaIzin>
-     */
-    public function izinBawaan(): array
-    {
-        return match ($this) {
-            self::Pembeli => [NamaIzin::KeranjangKelola, NamaIzin::TokoBuka],
-            self::Penjual => [NamaIzin::ProdukKelola, NamaIzin::DompetLihat],
-            self::Admin => [NamaIzin::TokoModerasi, NamaIzin::PeranKelola],
-            self::Keuangan => [NamaIzin::BukuBesarLihat],
-            self::Auditor => [NamaIzin::BukuBesarLihat],
+            self::Pembeli => [
+                NamaIzin::KeranjangKelola,
+                NamaIzin::TokoBuka,
+                NamaIzin::PesananBuat,
+            ],
+            self::Penjual => [
+                NamaIzin::ProdukKelola,
+                NamaIzin::DompetLihat,
+            ],
+            self::Admin => [
+                NamaIzin::TokoModerasi,
+                NamaIzin::PeranKelola,
+            ],
+            self::Keuangan => [
+                NamaIzin::BukuBesarLihat,
+            ],
+            self::Auditor => [
+                NamaIzin::BukuBesarLihat,
+            ],
         };
     }
 }
