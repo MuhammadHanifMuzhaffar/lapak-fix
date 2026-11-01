@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             PenggunaSeeder::class,
             KatalogSeeder::class,
             DompetSeeder::class,
+            ContohMutasiSeeder::class,
         ]);
     }
 }

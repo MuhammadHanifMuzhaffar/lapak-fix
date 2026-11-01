@@ -23,4 +23,12 @@ final class DompetController extends Controller
             'jumlah_mutasi' => $dompet?->mutasi()->count() ?? 0,
         ]);
     }
+
+    public function mutasi(Request $request): JsonResponse
+    {
+        $halaman = $this->buku->mutasiPenjual($request->user())
+            ->paginate(config('lapak.katalog.per_halaman_bawaan'), ['*'], 'halaman');
+
+        return $this->berhalaman($halaman, ProdukSayaResource::class);
+    }
 }
