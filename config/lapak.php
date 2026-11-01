@@ -31,4 +31,8 @@ return [
         'masuk_per_ip' => 20,
         'konfirmasi' => 5,
     ],
+
+    'izin' => [
+        'ingat_menit' => (int) env('LAPAK_IZIN_INGAT_MENIT', 120),
+    ],
 ];

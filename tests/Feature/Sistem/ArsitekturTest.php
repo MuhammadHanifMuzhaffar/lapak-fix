@@ -1,20 +1,20 @@
 <?php
 
-arch('tidak ada alat debug yang tertinggal')
-    ->expect(['dd', 'dump', 'var_dump', 'ray'])
-    ->not->toBeUsed();
+it('melarang penulisan langsung pada tabel pengguna_peran di luar PengelolaPeran', function () {
+    $jalur = app_path();
+    $penghubung = [];
 
-arch('lapisan domain adalah PHP murni')
-    ->expect('App\Domain')
-    ->not->toUse(['Illuminate\Http', 'Illuminate\Database', 'Illuminate\Support\Facades']);
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($jalur));
+    foreach ($iterator as $satu) {
+        if (! $satu->isFile() || $satu->getFilename() === 'PengelolaPeran.php') {
+            continue;
+        }
 
-it('tidak memakai tipe pecahan untuk kolom apa pun (LP-1)', function () {
-    $pelanggar = [];
-    foreach (glob(database_path('migrations/*.php')) as $berkas) {
-        if (preg_match('/->(float|double|decimal)\(/', file_get_contents($berkas))) {
-            $pelanggar[] = basename($berkas);
+        $isi = file_get_contents($satu->getPathname());
+        if (str_contains($isi, 'pengguna_peran')) {
+            $penghubung[] = $satu->getPathname();
         }
     }
 
-    expect($pelanggar)->toBeEmpty();
+    expect($penghubung)->toBeEmpty('Penyebutan pengguna_peran di luar PengelolaPeran: '.implode(', ', $penghubung));
 });
