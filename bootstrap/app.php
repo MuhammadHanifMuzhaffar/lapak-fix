@@ -1,8 +1,8 @@
 <?php
 
 use App\Exceptions\PenanganGalatApi;
-use App\Http\Middleware\IdPermintaan;
 use App\Http\Middleware\Idempoten;
+use App\Http\Middleware\IdPermintaan;
 use App\Http\Middleware\PaksaJson;
 use App\Http\Middleware\PeriksaIzin;
 use App\Http\Middleware\SesiSegar;

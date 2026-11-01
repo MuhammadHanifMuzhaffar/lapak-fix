@@ -4,21 +4,27 @@ declare(strict_types=1);
 
 namespace App\Balapan;
 
-use App\Models\Alamat;
+use App\Exceptions\ProdukTidakDapatDibeli;
+use App\Models\ButirPesanan;
 use App\Models\Checkout;
 use App\Models\Kategori;
-use App\Models\Pengguna;
+use App\Models\Pembayaran;
+use App\Models\Pesanan;
 use App\Models\Produk;
 use App\Models\Toko;
 use App\Services\PembatalanOtomatis;
-use App\Services\PenerbitSesi;
+use App\Services\PenjagaStok;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class BatalSaatCheckout implements SkenarioBalapan
 {
-    use PanggilHttp;
-
     public const STOK_AWAL = 50;
+
+    public function __construct(
+        private readonly PembatalanOtomatis $pembatalan,
+        private readonly PenjagaStok $penjaga,
+    ) {}
 
     public function keterangan(): string
     {
@@ -42,91 +48,58 @@ final class BatalSaatCheckout implements SkenarioBalapan
             ->all();
 
         $checkout = [];
-        foreach (range(1, 6) as $i) {
-            $pembeli = Pengguna::factory()->pembeli()->create();
-            $alamat = Alamat::factory()->for($pembeli, 'pengguna')->create();
-            [$sesi, $kunci] = app(PenerbitSesi::class)->terbitkan($pembeli, "Sesi Batal {$i}");
-
-            $this->panggil('PUT', "/api/v1/keranjang/butir/{$besar->id}", ['kuantitas' => 1], [
-                'Authorization' => "Bearer {$kunci}",
-            ]);
-            $this->panggil('PUT', "/api/v1/keranjang/butir/{$kecil->id}", ['kuantitas' => 1], [
-                'Authorization' => "Bearer {$kunci}",
-            ]);
-
-            [$status, $json] = $this->panggil('POST', '/api/v1/checkout', ['alamat_id' => $alamat->id], [
-                'Authorization' => "Bearer {$kunci}",
-                'Idempotency-Key' => (string) Str::uuid(),
-            ]);
-
-            $idCheckout = $json['data']['id'];
-            \Illuminate\Support\Facades\DB::table('pembayaran')
-                ->where('checkout_id', $idCheckout)
-                ->update(['batas_bayar_pada' => now()->subMinutes(5)]);
-
-            $checkout[] = $idCheckout;
+        foreach (range(1, intdiv($this->proses(), 2)) as $ke) {
+            $induk = Checkout::factory()->create();
+            $pesanan = Pesanan::factory()->for($induk)->for($toko)->create();
+            // Nomor produk besar disimpan lebih dulu.
+            ButirPesanan::factory()->for($pesanan)->create(['produk_id' => $besar->id]);
+            ButirPesanan::factory()->for($pesanan)->create(['produk_id' => $kecil->id]);
+            Pembayaran::factory()->for($induk)->create(['batas_bayar_pada' => now()->subMinute()]);
+            $checkout[] = $induk->id;
         }
 
-        $pembeliAktif = [];
-        foreach (range(1, 6) as $i) {
-            $pembeli = Pengguna::factory()->pembeli()->create();
-            $alamat = Alamat::factory()->for($pembeli, 'pengguna')->create();
-            [$sesi, $kunci] = app(PenerbitSesi::class)->terbitkan($pembeli, "Sesi Beli {$i}");
-
-            $this->panggil('PUT', "/api/v1/keranjang/butir/{$kecil->id}", ['kuantitas' => 1], [
-                'Authorization' => "Bearer {$kunci}",
-            ]);
-            $this->panggil('PUT', "/api/v1/keranjang/butir/{$besar->id}", ['kuantitas' => 1], [
-                'Authorization' => "Bearer {$kunci}",
-            ]);
-
-            $pembeliAktif[] = [
-                'kunci_sesi' => $kunci,
-                'alamat_id' => $alamat->id,
-            ];
-        }
-
-        return [
-            'checkout_batal' => $checkout,
-            'pembeli_aktif' => $pembeliAktif,
-            'produk_kecil' => $kecil->id,
-            'produk_besar' => $besar->id,
-        ];
+        return ['produk' => [$kecil->id, $besar->id], 'checkout' => $checkout];
     }
 
     public function jalankan(array $konteks, int $nomor): string
     {
         if ($nomor % 2 === 0) {
-            $idx = ($nomor / 2) - 1;
-            $id = $konteks['checkout_batal'][$idx];
-            $checkout = Checkout::find($id);
-            if ($checkout && app(PembatalanOtomatis::class)->batalkan($checkout)) {
-                return 'penjadwal: batal';
-            }
-            return 'penjadwal: abaikan';
+            $id = $konteks['checkout'][intdiv($nomor, 2) - 1];
+
+            return $this->pembatalan->batalkan($id) ? 'penjadwal: batal' : 'penjadwal: lewati';
         }
 
-        $idx = intdiv($nomor, 2);
-        $data = $konteks['pembeli_aktif'][$idx];
-        [$status, $json] = $this->panggil('POST', '/api/v1/checkout', ['alamat_id' => $data['alamat_id']], [
-            'Authorization' => "Bearer {$data['kunci_sesi']}",
-            'Idempotency-Key' => (string) Str::uuid(),
-        ]);
-
-        if ($status === 201) {
-            return 'pembeli: beli 2';
+        try {
+            DB::transaction(function () use ($konteks): void {
+                foreach ($this->penjaga->ambil($konteks['produk']) as $produk) {
+                    $this->penjaga->kurangi($produk, 1);
+                }
+            });
+        } catch (ProdukTidakDapatDibeli) {
+            return 'pembeli: ditolak';
         }
-        return $this->ringkas($status, $json);
+
+        return 'pembeli: beli 2';
     }
 
     public function periksa(array $konteks, array $hasil): array
     {
+        $batal = count(array_filter($hasil, fn (string $h) => $h === 'penjadwal: batal'));
+        $beli = count(array_filter($hasil, fn (string $h) => $h === 'pembeli: beli 2'));
+        $seharusnya = self::STOK_AWAL + $batal - $beli;
+
         $pelanggaran = [];
-        foreach ($hasil as $h) {
-            if (str_contains($h, '1213 Deadlock') || str_contains($h, 'kebuntuan')) {
-                $pelanggaran[] = 'Terjadi deadlock (kebuntuan) antara pembatalan otomatis dan checkout.';
+        if ($batal + $beli !== count($hasil)) {
+            $pelanggaran[] = 'Ada proses yang gagal, misalnya karena kebuntuan (deadlock).';
+        }
+
+        foreach (Produk::query()->findMany($konteks['produk']) as $produk) {
+            if ($produk->stok !== $seharusnya) {
+                $pelanggaran[] = "Stok produk {$produk->id} adalah {$produk->stok}, "
+                    ."seharusnya {$seharusnya}.";
             }
         }
+
         return $pelanggaran;
     }
 }

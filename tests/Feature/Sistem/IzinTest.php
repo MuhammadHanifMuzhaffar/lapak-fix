@@ -56,7 +56,7 @@ it('menggabungkan izin dari seluruh peran yang dipegang (LP-2)', function () {
     $sri = beriPeranLangsung(Pengguna::factory()->create(), NamaPeran::Pembeli, NamaPeran::Penjual);
 
     expect($this->pemeriksa->daftar($sri))->toBe([
-        'dompet.lihat', 'keranjang.kelola', 'produk.kelola', 'toko.buka',
+        'dompet.lihat', 'keranjang.kelola', 'pesanan.buat', 'produk.kelola', 'toko.buka',
     ]);
 });
 

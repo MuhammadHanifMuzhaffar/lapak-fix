@@ -6,24 +6,45 @@ use App\Http\Controllers\ProdukSayaController;
 use App\Http\Controllers\TokoSayaController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/kategori', [KatalogController::class, 'kategori']);
-Route::get('/produk', [KatalogController::class, 'produk']);
-Route::get('/produk/{slug}', [KatalogController::class, 'detailProduk']);
-Route::get('/toko/{slug}', [KatalogController::class, 'detailToko']);
+Route::get('produk', [KatalogController::class, 'index'])->name('produk.index');
+Route::get('produk/{slug}', [KatalogController::class, 'show'])->name('produk.show');
+Route::get('toko/{slug}', [KatalogController::class, 'toko'])->name('toko.show');
 
-Route::middleware(['api', 'auth:sesi'])->group(function () {
-    Route::post('/toko-saya', [TokoSayaController::class, 'store']);
-    Route::get('/toko-saya', [TokoSayaController::class, 'show']);
-    Route::patch('/toko-saya', [TokoSayaController::class, 'update']);
+Route::middleware('auth:sesi')
+    ->prefix('toko-saya')
+    ->name('toko-saya.')
+    ->whereNumber('id')
+    ->group(function (): void {
+        Route::get('/', [TokoSayaController::class, 'show'])->name('show');
+        Route::patch('/', [TokoSayaController::class, 'update'])->name('update');
 
-    Route::get('/toko-saya/produk', [ProdukSayaController::class, 'index']);
-    Route::post('/toko-saya/produk', [ProdukSayaController::class, 'store']);
-    Route::get('/toko-saya/produk/{id}', [ProdukSayaController::class, 'show']);
-    Route::patch('/toko-saya/produk/{id}', [ProdukSayaController::class, 'update']);
-    Route::post('/toko-saya/produk/{id}/sesuaikan-stok', [ProdukSayaController::class, 'sesuaikanStok']);
+        Route::post('/', [TokoSayaController::class, 'store'])
+            ->middleware('izin:toko.buka')
+            ->name('store');
 
-    Route::post('/admin/toko/{id}/setujui', [ModerasiTokoController::class, 'setujui']);
-    Route::post('/admin/toko/{id}/tolak', [ModerasiTokoController::class, 'tolak']);
-    Route::post('/admin/toko/{id}/tangguhkan', [ModerasiTokoController::class, 'tangguhkan']);
-    Route::post('/admin/toko/{id}/aktifkan', [ModerasiTokoController::class, 'aktifkan']);
-});
+        Route::middleware('izin:produk.kelola')->group(function (): void {
+            Route::get('produk', [ProdukSayaController::class, 'index'])->name('produk.index');
+            Route::post('produk', [ProdukSayaController::class, 'store'])->name('produk.store');
+            Route::patch('produk/{id}', [ProdukSayaController::class, 'update'])->name('produk.update');
+            Route::delete('produk/{id}', [ProdukSayaController::class, 'destroy'])->name('produk.destroy');
+
+            // Mengubah stok: wajib Idempotency-Key (LP-11). "Tambah 5" yang diulang karena
+            // jaringan putus tidak boleh menjadi tambah 10.
+            Route::post('produk/{id}/stok', [ProdukSayaController::class, 'stok'])
+                ->middleware('idempoten')
+                ->name('produk.stok');
+        });
+    });
+
+Route::middleware(['auth:sesi', 'izin:toko.moderasi'])
+    ->prefix('admin/toko')
+    ->name('admin.toko.')
+    ->whereNumber('id')
+    ->group(function (): void {
+        Route::get('/', [ModerasiTokoController::class, 'index'])->name('index');
+
+        Route::middleware('sesi.segar')->group(function (): void {
+            Route::post('{id}/setujui', [ModerasiTokoController::class, 'setujui'])->name('setujui');
+            Route::post('{id}/tangguhkan', [ModerasiTokoController::class, 'tangguhkan'])->name('tangguhkan');
+        });
+    });

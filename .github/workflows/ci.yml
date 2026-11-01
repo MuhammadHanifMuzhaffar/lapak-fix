@@ -41,3 +41,59 @@ jobs:
 
       - name: Pengujian
         run: php vendor/bin/pest --ci
+
+  # Tugas kedua, sejak Sesi 4. SQLite tidak mengenal SELECT ... FOR UPDATE dan hanya mengizinkan
+  # satu penulis, sehingga meloloskan kode yang salah di bawah beban. Tugas ini mengulang seluruh
+  # pengujian pada MySQL, lalu melepas proses serentak sungguhan lewat lapak:balapan.
+  kualitas-mysql:
+    name: kualitas-mysql
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: lapak
+          MYSQL_ROOT_PASSWORD: rahasia-ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -prahasia-ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: lapak
+      DB_USERNAME: root
+      DB_PASSWORD: rahasia-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_mysql
+          coverage: none
+
+      - name: Pasang dependensi
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Siapkan lingkungan
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Pengujian pada MySQL
+        run: ./vendor/bin/pest --ci
+
+      # Pengujian di atas mengosongkan basis data, maka data acuan diisi ulang lebih dulu.
+      - name: Migrasi dan seeder dari basis data kosong
+        run: php artisan migrate:fresh --seed --force
+
+      - name: Uji balapan
+        run: php artisan lapak:balapan --semua
+
+      - name: Buku besar seimbang setelah balapan
+        run: php artisan lapak:periksa-buku

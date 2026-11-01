@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\PemeriksaSesi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,7 +60,19 @@ final class Sesi extends Model
     /** Sesi yang sedang dipakai permintaan ini. Hanya sah di belakang middleware auth:sesi. */
     public static function dariPermintaan(Request $request): self
     {
-        return $request->attributes->get('sesi')
-            ?? throw new LogicException('Rute ini memakai sesi tetapi tidak dilindungi auth:sesi.');
+        if ($sesi = $request->attributes->get('sesi')) {
+            return $sesi;
+        }
+
+        if ($token = $request->bearerToken()) {
+            $pemeriksa = app(PemeriksaSesi::class);
+            if ($sesi = $pemeriksa->periksa($token)) {
+                $request->attributes->set('sesi', $sesi);
+
+                return $sesi;
+            }
+        }
+
+        throw new LogicException('Rute ini memakai sesi tetapi tidak dilindungi auth:sesi.');
     }
 }

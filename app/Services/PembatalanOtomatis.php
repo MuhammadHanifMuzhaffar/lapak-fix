@@ -9,7 +9,6 @@ use App\Domain\Pesanan\StatusPesanan;
 use App\Models\Checkout;
 use App\Models\Pembayaran;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 final class PembatalanOtomatis
 {
@@ -19,9 +18,11 @@ final class PembatalanOtomatis
         private readonly PenjagaStok $stok,
     ) {}
 
-    public function batalkan(Checkout $checkout): bool
+    public function batalkan(int|Checkout $checkout): bool
     {
-        return $this->gembok->kunci($checkout, function (Checkout $checkout): bool {
+        $id = $checkout instanceof Checkout ? $checkout->id : $checkout;
+
+        return $this->gembok->dalam($id, function (Checkout $checkout): bool {
             $pembayaran = Pembayaran::query()
                 ->where('checkout_id', $checkout->id)
                 ->lockForUpdate()

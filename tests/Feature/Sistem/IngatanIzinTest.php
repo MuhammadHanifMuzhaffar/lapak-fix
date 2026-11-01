@@ -13,11 +13,11 @@ beforeEach(function () {
 
 it('melupakan ingatan izin saat peran berubah', function () {
     $this->pengelola->beri($this->pengguna, NamaPeran::Pembeli);
-    expect($this->pemeriksa->daftar($this->pengguna))->toBe(['keranjang.kelola', 'toko.buka']);
+    expect($this->pemeriksa->daftar($this->pengguna))->toBe(['keranjang.kelola', 'pesanan.buat', 'toko.buka']);
 
     $this->pengelola->beri($this->pengguna, NamaPeran::Admin);
     expect($this->pemeriksa->daftar($this->pengguna))->toBe([
-        'keranjang.kelola', 'peran.kelola', 'toko.buka', 'toko.moderasi',
+        'keranjang.kelola', 'peran.kelola', 'pesanan.buat', 'toko.buka', 'toko.moderasi',
     ]);
 });
 

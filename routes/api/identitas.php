@@ -1,27 +1,51 @@
 <?php
 
 use App\Http\Controllers\AlamatController;
-use App\Http\Controllers\KonfirmasiSesiController;
 use App\Http\Controllers\MasukController;
-use App\Http\Controllers\ProfilSayaController;
+use App\Http\Controllers\PeranPenggunaController;
 use App\Http\Controllers\RegistrasiController;
 use App\Http\Controllers\SesiController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/registrasi', RegistrasiController::class);
-Route::post('/masuk', MasukController::class);
+Route::post('registrasi', RegistrasiController::class)->name('registrasi');
+Route::post('masuk', MasukController::class)->middleware('throttle:masuk')->name('masuk');
 
-Route::middleware(['api', 'auth:sesi'])->group(function () {
-    Route::get('/saya', ProfilSayaController::class);
-    Route::post('/sesi/konfirmasi', KonfirmasiSesiController::class);
+Route::middleware('auth:sesi')->group(function (): void {
+    Route::get('saya', [SesiController::class, 'saya'])->name('saya');
+    Route::post('keluar', [SesiController::class, 'keluar'])->name('keluar');
 
-    Route::get('/sesi', [SesiController::class, 'index']);
-    Route::delete('/sesi/{id}', [SesiController::class, 'destroy']);
-    Route::delete('/sesi', [SesiController::class, 'destroyOthers']);
+    Route::get('sesi', [SesiController::class, 'index'])->name('sesi.index');
+    Route::post('sesi/konfirmasi', [SesiController::class, 'konfirmasi'])
+        ->middleware('throttle:konfirmasi')
+        ->name('sesi.konfirmasi');
 
-    Route::get('/alamat', [AlamatController::class, 'index']);
-    Route::post('/alamat', [AlamatController::class, 'store']);
-    Route::patch('/alamat/{alamat}', [AlamatController::class, 'update']);
-    Route::delete('/alamat/{alamat}', [AlamatController::class, 'destroy']);
-    Route::post('/alamat/{alamat}/jadikan-utama', [AlamatController::class, 'jadikanUtama']);
+    Route::delete('sesi/{pengenal}', [SesiController::class, 'destroy'])
+        ->middleware('sesi.segar')
+        ->name('sesi.destroy');
+
+    Route::middleware('izin:peran.kelola')
+        ->prefix('admin/pengguna')
+        ->name('admin.pengguna.')
+        ->whereNumber('id')
+        ->group(function (): void {
+            Route::get('/', [PeranPenggunaController::class, 'index'])->name('index');
+
+            Route::middleware('sesi.segar')->group(function (): void {
+                Route::put('{id}/peran/{peran}', [PeranPenggunaController::class, 'beri'])
+                    ->name('peran.beri');
+                Route::delete('{id}/peran/{peran}', [PeranPenggunaController::class, 'cabut'])
+                    ->name('peran.cabut');
+            });
+        });
+
+    Route::middleware('izin:pesanan.buat')
+        ->prefix('alamat')
+        ->name('alamat.')
+        ->whereNumber('id')
+        ->group(function (): void {
+            Route::get('/', [AlamatController::class, 'index'])->name('index');
+            Route::post('/', [AlamatController::class, 'store'])->name('store');
+            Route::put('{id}/utama', [AlamatController::class, 'utama'])->name('utama');
+            Route::delete('{id}', [AlamatController::class, 'destroy'])->name('destroy');
+        });
 });

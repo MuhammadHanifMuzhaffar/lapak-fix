@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Domain\Uang;
-use App\Http\Resources\MutasiDompetResource;
+use App\Http\Resources\MutasiResource;
 use App\Services\BukuBesar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +30,6 @@ final class DompetController extends Controller
         $halaman = $this->buku->mutasiPenjual($request->user())
             ->paginate(config('lapak.katalog.per_halaman_bawaan'), ['*'], 'halaman');
 
-        return $this->berhalaman($halaman, MutasiDompetResource::class);
+        return $this->berhalaman($halaman, MutasiResource::class);
     }
 }

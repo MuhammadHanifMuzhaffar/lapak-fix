@@ -10,6 +10,7 @@ const RUTE_PUBLIK = [
     'GET api/v1/produk/{slug}',
     'GET api/v1/toko/{slug}',
     'POST api/v1/simulasi-belanja',
+    'POST api/v1/webhook/pembayaran',
 ];
 
 function ruteApi(): array

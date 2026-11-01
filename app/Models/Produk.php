@@ -54,6 +54,12 @@ class Produk extends Model
         return $this->toko->pemilik_id === $pengguna->id;
     }
 
+    public function sedangTampil(): bool
+    {
+        return $this->status === StatusProduk::Aktif
+            && $this->toko->status === StatusToko::Aktif;
+    }
+
     public function scopeTampil(Builder $query): void
     {
         $query->where('produk.status', StatusProduk::Aktif)

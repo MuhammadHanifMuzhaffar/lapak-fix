@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\ButirPesananFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 final class ButirPesanan extends Model
 {
+    /** @use HasFactory<ButirPesananFactory> */
     use HasFactory;
+
+    public $timestamps = false;
 
     protected $table = 'butir_pesanan';
 

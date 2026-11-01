@@ -2,9 +2,8 @@
 
 namespace App\Providers;
 
-use App\Services\PenjagaTransaksi;
-
 use App\Models\Pengguna;
+use App\Models\Sesi;
 use App\Services\PemeriksaSesi;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +22,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        \App\Services\PenjagaTransaksi::daftarkanBatasLaju();
         Model::shouldBeStrict(! $this->app->isProduction());
 
         $this->daftarkanGuardSesi();
@@ -58,5 +56,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('konfirmasi', fn (Request $request) => Limit::perMinute(
             config('lapak.laju.konfirmasi'),
         )->by('konfirmasi:'.($request->user()?->id ?? $request->ip())));
+
+        RateLimiter::for('transaksi', fn (Request $request) => Limit::perMinute(
+            config('lapak.transaksi.laju_per_menit', 10),
+        )->by('transaksi:'.(Sesi::dariPermintaan($request)->pengenal)));
     }
 }
