@@ -9,7 +9,7 @@ use App\Models\Pengguna;
 use App\Models\Sesi;
 use Illuminate\Support\Str;
 
-final class PenerbitSesi
+class PenerbitSesi
 {
     public function terbitkan(
         Pengguna $pengguna,
@@ -17,30 +17,37 @@ final class PenerbitSesi
         ?string $ip = null,
         ?string $agenPengguna = null,
     ): array {
-        $kunci = KunciSesi::baru((string) Str::ulid());
+        $pengenal = (string) Str::ulid();
+        $rahasia = hash('sha256', Str::random(40));
+        $hashKunci = hash('sha256', $rahasia);
 
         $sesi = new Sesi;
         $sesi->forceFill([
-            'pengenal' => $kunci->pengenal,
+            'pengenal' => $pengenal,
             'pengguna_id' => $pengguna->id,
-            'hash_kunci' => $kunci->hash(),
-            'nama_perangkat' => Str::limit($namaPerangkat, 57),
+            'hash_kunci' => $hashKunci,
+            'nama_perangkat' => $namaPerangkat,
             'ip' => $ip,
-            'agen_pengguna' => $agenPengguna === null ? null : Str::limit($agenPengguna, 252),
-            'dikonfirmasi_pada' => now(),
+            'agen_pengguna' => $agenPengguna,
             'terakhir_dipakai_pada' => now(),
+            'dikonfirmasi_pada' => now(),
             'kedaluwarsa_pada' => now()->addDays(config('lapak.sesi.masa_hidup_hari')),
         ])->save();
 
-        return [$sesi, $kunci->teks()];
+        return [$sesi, KunciSesi::dari($pengenal, $rahasia)->string()];
     }
 
-    public function rotasi(Sesi $sesi): string
+    public function cabut(Sesi $sesi): void
     {
-        $kunci = KunciSesi::baru($sesi->pengenal);
-        $sesi->forceFill(['hash_kunci' => $kunci->hash()])->save();
+        $sesi->forceFill(['dicabut_pada' => now()])->save();
+    }
 
-        return $kunci->teks();
+    public function cabutSemua(Pengguna $pengguna): int
+    {
+        return Sesi::query()
+            ->berlaku()
+            ->where('pengguna_id', $pengguna->id)
+            ->update(['dicabut_pada' => now()]);
     }
 
     public function tandaiSegar(Sesi $sesi): void
@@ -48,10 +55,15 @@ final class PenerbitSesi
         $sesi->forceFill(['dikonfirmasi_pada' => now()])->save();
     }
 
-    public function cabut(Sesi $sesi): void
+    public function rotasi(Sesi $sesi): string
     {
-        if ($sesi->dicabut_pada === null) {
-            $sesi->forceFill(['dicabut_pada' => now()])->save();
-        }
+        $rahasiaBaru = hash('sha256', Str::random(40));
+
+        $sesi->forceFill([
+            'hash_kunci' => hash('sha256', $rahasiaBaru),
+            'terakhir_dipakai_pada' => now(),
+        ])->save();
+
+        return KunciSesi::dari($sesi->pengenal, $rahasiaBaru)->string();
     }
 }
