@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-final class Produk extends Model
+class Produk extends Model
 {
     /** @use HasFactory<ProdukFactory> */
     use HasFactory;
@@ -22,7 +22,6 @@ final class Produk extends Model
     protected $fillable = [
         'kategori_id',
         'nama',
-        'slug',
         'deskripsi',
         'harga_rupiah',
         'stok',
@@ -39,63 +38,27 @@ final class Produk extends Model
         ];
     }
 
-    /** @return BelongsTo<Toko, $this> */
     public function toko(): BelongsTo
     {
         return $this->belongsTo(Toko::class, 'toko_id');
     }
 
-    /** @return BelongsTo<Kategori, $this> */
     public function kategori(): BelongsTo
     {
         return $this->belongsTo(Kategori::class, 'kategori_id');
     }
 
-    /**
-     * LP-4: produk tampil hanya bila berstatus aktif DAN tokonya aktif.
-     * Seluruh pintu publik wajib lewat scope ini; jangan menulis ulang syaratnya di controller.
-     *
-     * @param  Builder<Produk>  $kueri
-     */
-    public function scopeTampil(Builder $kueri): void
+    public function dimilikiOleh(Pengguna $pengguna): bool
     {
-        $kueri->where('produk.status', StatusProduk::Aktif)
-            ->whereHas('toko', fn (Builder $toko) => $toko->where('status', StatusToko::Aktif));
+        return $this->toko->pemilik_id === $pengguna->id;
     }
 
-    /**
-     * @param  Builder<Produk>  $kueri
-     * @param  array<string, mixed>  $saringan  hasil validasi KatalogRequest
-     */
-    public function scopeSaring(Builder $kueri, array $saringan): void
+    public function scopeTampil(Builder $query): void
     {
-        $kueri
-            ->when($saringan['kategori'] ?? null, fn (Builder $q, string $slug) => $q
-                ->whereHas('kategori', fn (Builder $k) => $k->where('slug', $slug)))
-            ->when($saringan['toko'] ?? null, fn (Builder $q, string $slug) => $q
-                ->whereHas('toko', fn (Builder $t) => $t->where('slug', $slug)))
-            ->when($saringan['cari'] ?? null, fn (Builder $q, string $kata) => $q->whereRaw(
-                "produk.nama like ? escape '!'",
-                ['%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $kata).'%'],
-            ))
-            ->when(isset($saringan['harga_min']), fn (Builder $q) => $q
-                ->where('harga_rupiah', '>=', $saringan['harga_min']))
-            ->when(isset($saringan['harga_maks']), fn (Builder $q) => $q
-                ->where('harga_rupiah', '<=', $saringan['harga_maks']))
-            ->when($saringan['tersedia'] ?? false, fn (Builder $q) => $q->where('stok', '>', 0));
-    }
-
-    /**
-     * Pengurutan memakai daftar putih. Nama kolom tidak pernah diambil dari masukan klien.
-     *
-     * @param  Builder<Produk>  $kueri
-     */
-    public function scopeUrut(Builder $kueri, ?string $urut): void
-    {
-        match ($urut) {
-            'harga_naik' => $kueri->orderBy('harga_rupiah')->orderBy('id'),
-            'harga_turun' => $kueri->orderByDesc('harga_rupiah')->orderBy('id'),
-            default => $kueri->orderByDesc('id'),
-        };
+        $query->where('status', StatusProduk::Aktif)
+            ->where('stok', '>', 0)
+            ->whereHas('toko', function (Builder $q) {
+                $q->where('status', StatusToko::Aktif);
+            });
     }
 }
