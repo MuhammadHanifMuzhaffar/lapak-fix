@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'GET api/v1/keranjang' => '*',
-    'DELETE api/v1/keranjang' => '*',
-    'PUT api/v1/keranjang/butir/{produkId}' => '*',
-    'DELETE api/v1/keranjang/butir/{produkId}' => '*',
+    'GET api/v1/keranjang' => ['pembeli'],
+    'DELETE api/v1/keranjang' => ['pembeli'],
+    'PUT api/v1/keranjang/butir/{produkId}' => ['pembeli'],
+    'DELETE api/v1/keranjang/butir/{produkId}' => ['pembeli'],
 ];

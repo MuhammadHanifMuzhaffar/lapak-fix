@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('simulasi-belanja', SimulasiBelanjaController::class)->name('belanja.simulasi');
 
-Route::middleware('auth:sesi')
+Route::middleware(['auth:sesi', 'izin:keranjang.kelola'])
     ->prefix('keranjang')
     ->name('keranjang.')
     ->whereNumber('produkId')
