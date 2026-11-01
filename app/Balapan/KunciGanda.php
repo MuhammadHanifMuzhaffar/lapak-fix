@@ -7,6 +7,7 @@ namespace App\Balapan;
 use App\Models\Alamat;
 use App\Models\Checkout;
 use App\Models\Kategori;
+use App\Models\Keranjang;
 use App\Models\Pengguna;
 use App\Models\Produk;
 use App\Models\Toko;
@@ -45,6 +46,9 @@ final class KunciGanda implements SkenarioBalapan
         $this->panggil('PUT', "/api/v1/keranjang/butir/{$produk->id}", ['kuantitas' => 2], [
             'Authorization' => "Bearer {$kunci}",
         ]);
+
+        $keranjang = Keranjang::query()->firstOrCreate(['pengguna_id' => $pembeli->id]);
+        $keranjang->butir()->updateOrCreate(['produk_id' => $produk->id], ['kuantitas' => 2]);
 
         return [
             'pembeli' => $pembeli->id,
