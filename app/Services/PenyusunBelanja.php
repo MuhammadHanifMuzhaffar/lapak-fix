@@ -10,11 +10,12 @@ use App\Domain\Belanja\ButirBermasalah;
 use App\Domain\Belanja\PenghitungBelanja;
 use App\Domain\Uang;
 use App\Exceptions\ProdukTidakDapatDibeli;
+use App\Models\Pengguna;
 use App\Models\Produk;
 
 final class PenyusunBelanja
 {
-    public function pilah(array $butir): array
+    public function pilah(array $butir, ?Pengguna $pembeli = null): array
     {
         $diminta = collect($butir)->pluck('kuantitas', 'produk_id');
 
@@ -35,6 +36,14 @@ final class PenyusunBelanja
             if ($barang === null) {
                 $bermasalah[] = new ButirBermasalah(
                     $produkId, $kuantitas, AlasanBermasalah::TidakTersedia,
+                );
+
+                continue;
+            }
+
+            if ($pembeli !== null && $barang->dimilikiOleh($pembeli)) {
+                $bermasalah[] = new ButirBermasalah(
+                    $produkId, $kuantitas, AlasanBermasalah::ProdukSendiri, $barang->nama,
                 );
 
                 continue;
@@ -68,9 +77,9 @@ final class PenyusunBelanja
         return [$rincian, $bermasalah];
     }
 
-    public function susun(array $butir): array
+    public function susun(array $butir, ?Pengguna $pembeli = null): array
     {
-        [$rincian, $bermasalah] = $this->pilah($butir);
+        [$rincian, $bermasalah] = $this->pilah($butir, $pembeli);
 
         $hilang = [];
         foreach ($bermasalah as $masalah) {
@@ -83,6 +92,12 @@ final class PenyusunBelanja
         }
 
         foreach ($bermasalah as $masalah) {
+            if ($masalah->alasan === AlasanBermasalah::ProdukSendiri) {
+                throw ProdukTidakDapatDibeli::milikSendiri(
+                    $masalah->produkId, (string) $masalah->namaProduk,
+                );
+            }
+
             throw ProdukTidakDapatDibeli::stokKurang(
                 $masalah->produkId,
                 (string) $masalah->namaProduk,

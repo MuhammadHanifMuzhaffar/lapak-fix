@@ -6,12 +6,16 @@ namespace App\Exceptions;
 
 final class ProdukTidakDapatDibeli extends GalatDomain
 {
-    /**
-     * @param  list<int>  $idProduk
-     */
     public static function tidakTampil(array $idProduk): self
     {
-        return new self('LP-4', 'Sebagian produk tidak tersedia untuk dibeli.', 422, [
+        return new self('LP-4', 'Satu atau lebih produk tidak lagi tersedia.', 422, [
+            'produk_id' => $idProduk,
+        ]);
+    }
+
+    public static function milikSendiri(int $idProduk, string $nama): self
+    {
+        return new self('LP-5', "{$nama} adalah produk toko Anda sendiri.", 422, [
             'produk_id' => $idProduk,
         ]);
     }

@@ -8,4 +8,5 @@ enum AlasanBermasalah: string
 {
     case TidakTersedia = 'tidak_tersedia';
     case StokKurang = 'stok_kurang';
+    case ProdukSendiri = 'produk_sendiri';
 }
