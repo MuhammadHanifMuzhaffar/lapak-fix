@@ -1,4 +1,4 @@
-# Alokasi Kepemilikan Berkas Kode Sesi 2
+# Alokasi Kepemilikan Berkas Kode Sesi 3
 /config/auth.php                              @MuhammadHanifMuzhaffar
 /app/Models/Sesi.php                          @MuhammadHanifMuzhaffar
 /app/Services/PenerbitSesi.php                @MuhammadHanifMuzhaffar
@@ -6,11 +6,20 @@
 /app/Services/PemeriksaKataSandi.php          @MuhammadHanifMuzhaffar
 /app/Http/Controllers/MasukController.php     @MuhammadHanifMuzhaffar
 /app/Http/Controllers/SesiController.php      @MuhammadHanifMuzhaffar
+/app/Services/PengelolaPeran.php              @MuhammadHanifMuzhaffar
+/app/Http/Controllers/PeranPenggunaController.php @MuhammadHanifMuzhaffar
+/app/Policies/PenggunaPolicy.php              @MuhammadHanifMuzhaffar
+/app/Console/Commands/BeriPeran.php           @MuhammadHanifMuzhaffar
+/database/factories/PenggunaFactory.php       @MuhammadHanifMuzhaffar
 
 /app/Http/Controllers/KatalogController.php   @NimatulAzizahh
 /app/Http/Controllers/TokoSayaController.php  @NimatulAzizahh
 /app/Http/Controllers/ProdukSayaController.php @NimatulAzizahh
 /routes/api/katalog.php                       @NimatulAzizahh
+/tests/Feature/Katalog/                       @NimatulAzizahh
+/app/Services/ModerasiToko.php                @NimatulAzizahh
+/app/Http/Controllers/ModerasiTokoController.php @NimatulAzizahh
+/app/Policies/TokoPolicy.php                  @NimatulAzizahh
 
 /app/Services/PenyusunBelanja.php             @NovendraAnggoroAdjiNugroho
 /app/Services/LayananKeranjang.php            @NovendraAnggoroAdjiNugroho
@@ -21,6 +30,7 @@
 /app/Http/Controllers/DompetController.php    @KaishanAryaSetiko
 /routes/api/dompet.php                        @KaishanAryaSetiko
 /tests/Feature/Dompet/                        @KaishanAryaSetiko
+/app/Http/Controllers/BukuBesarController.php @KaishanAryaSetiko
 
 /routes/api/sistem.php                        @ZidniiAghniyaRajwa
 /routes/console.php                           @ZidniiAghniyaRajwa
@@ -29,6 +39,14 @@
 /app/Console/Commands/PangkasSesi.php         @ZidniiAghniyaRajwa
 /config/lapak.php                             @ZidniiAghniyaRajwa
 /database/seeders/DatabaseSeeder.php          @ZidniiAghniyaRajwa
+/tests/Feature/Sistem/                        @ZidniiAghniyaRajwa
+/app/Enums/NamaPeran.php                      @ZidniiAghniyaRajwa
+/app/Enums/NamaIzin.php                       @ZidniiAghniyaRajwa
+/app/Models/Peran.php                         @ZidniiAghniyaRajwa
+/app/Models/Izin.php                          @ZidniiAghniyaRajwa
+/app/Services/PemeriksaIzin.php               @ZidniiAghniyaRajwa
+/app/Console/Commands/MatriksIzin.php         @ZidniiAghniyaRajwa
+/database/seeders/PeranIzinSeeder.php         @ZidniiAghniyaRajwa
 
 # Pengecualian: pola paling akhir menang
 /app/Domain/Sesi/                             @MuhammadHanifMuzhaffar

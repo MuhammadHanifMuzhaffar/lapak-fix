@@ -30,7 +30,7 @@ it('menolak permintaan tanpa kunci sesi', function () {
 it('menampilkan keranjang kosong dalam bentuk yang sama dengan keranjang berisi', function () {
     $this->sebagai($this->andi)->getJson('/api/v1/keranjang')
         ->assertOk()
-        ->assertExactJson(['sukses' => true, 'pesan' => 'Operasi berhasil', 'data' => [
+        ->assertExactJson(['sukses' => true, 'meta' => null, 'data' => [
             'pesanan' => [],
             'total_bayar' => ['rupiah' => 0, 'tampilan' => 'Rp 0'],
             'tidak_tersedia' => [],

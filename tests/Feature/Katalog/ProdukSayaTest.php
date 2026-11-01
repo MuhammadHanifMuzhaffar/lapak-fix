@@ -104,5 +104,5 @@ it('mendaftar seluruh produk sendiri, termasuk draf dan arsip, tanpa produk toko
 
     $this->sebagai($this->sri)->getJson('/api/v1/toko-saya/produk')
         ->assertOk()
-        ->assertJsonPath('meta.total_data', 3);
+        ->assertJsonPath('meta.total', 3);
 });

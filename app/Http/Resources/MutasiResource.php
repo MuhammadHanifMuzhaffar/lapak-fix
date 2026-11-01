@@ -12,7 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * @mixin MutasiSaldo
  */
-final class MutasiResource extends JsonResource
+class MutasiResource extends JsonResource
 {
     public function toArray(Request $request): array
     {

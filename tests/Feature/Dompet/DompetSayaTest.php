@@ -26,7 +26,7 @@ it('menolak permintaan tanpa kunci sesi', function () {
 it('menampilkan saldo nol tanpa membuat dompet bagi pengguna tanpa transaksi', function () {
     $this->sebagai(Pengguna::factory()->create())->getJson('/api/v1/dompet')
         ->assertOk()
-        ->assertExactJson(['sukses' => true, 'pesan' => 'Operasi berhasil', 'data' => [
+        ->assertExactJson(['sukses' => true, 'meta' => null, 'data' => [
             'saldo' => ['rupiah' => 0, 'tampilan' => 'Rp 0'],
             'jumlah_mutasi' => 0,
         ]]);
@@ -72,7 +72,7 @@ it('membuka riwayat setelah kata sandi dikonfirmasi, dengan kunci yang baru', fu
 
     $this->denganKunci($kunciBaru)->getJson('/api/v1/dompet/mutasi')
         ->assertOk()
-        ->assertJsonPath('meta.total_data', 1)
+        ->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.jenis', 'lepas_dana')
         ->assertJsonPath('data.0.jumlah.tampilan', '+Rp 363.500')
         ->assertJsonPath('data.0.saldo_setelah', 363_500)
@@ -88,14 +88,14 @@ it('menampilkan hanya mutasi dompet sendiri, terbaru lebih dulu', function () {
 
     $this->sebagai($sri)->getJson('/api/v1/dompet/mutasi')
         ->assertOk()
-        ->assertJsonPath('meta.total_data', 2)
+        ->assertJsonPath('meta.total', 2)
         ->assertJsonPath('data.0.rujukan', 'LPK-UJI-1007')
         ->assertJsonPath('data.0.saldo_setelah', 350_000)
         ->assertJsonPath('data.1.rujukan', 'LPK-UJI-1005');
 
     $this->sebagai(Pengguna::factory()->create())->getJson('/api/v1/dompet/mutasi')
         ->assertOk()
-        ->assertJsonPath('meta.total_data', 0);
+        ->assertJsonPath('meta.total', 0);
 });
 
 it('menjalankan seeder contoh berulang kali tanpa menggandakan mutasi', function () {
