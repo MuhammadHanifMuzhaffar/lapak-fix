@@ -23,6 +23,7 @@ final class TokoSayaResource extends JsonResource
                 'tampilan' => Uang::dari($this->ongkir_rupiah)->format(),
             ],
             'status' => $this->status->value,
+            'catatan_moderasi' => $this->catatan_moderasi,
             'terlihat_publik' => $this->status === StatusToko::Aktif,
             'jumlah_produk' => $this->whenCounted('produk'),
         ];
