@@ -4,6 +4,7 @@ use App\Domain\Uang;
 use App\Enums\JenisDompet;
 use App\Enums\JenisMutasi;
 use App\Models\Dompet;
+use App\Models\MutasiSaldo;
 use App\Models\Pengguna;
 use App\Services\BukuBesar;
 
@@ -46,4 +47,64 @@ it('menampilkan saldo milik sendiri dan bukan milik orang lain', function () {
 
     $this->sebagai($wulan)->getJson('/api/v1/dompet')
         ->assertJsonPath('data.saldo.rupiah', 97_500);
+});
+
+it('membuka saldo tanpa sesi segar tetapi menuntutnya untuk riwayat mutasi (LP-15)', function () {
+    $sri = Pengguna::factory()->create();
+    lepasDanaKe($sri, 363_500, 'LPK-UJI-1003');
+
+    $this->sebagai($sri, segar: false)->getJson('/api/v1/dompet')->assertOk();
+    $this->getJson('/api/v1/dompet/mutasi')
+        ->assertForbidden()
+        ->assertJsonPath('galat.kode', 'LP-15');
+});
+
+it('membuka riwayat setelah kata sandi dikonfirmasi, dengan kunci yang baru', function () {
+    $sri = Pengguna::factory()->create(['kata_sandi' => 'BatikSolo2026']);
+    lepasDanaKe($sri, 363_500, 'LPK-UJI-1004');
+
+    $kunciBaru = $this->sebagai($sri, segar: false)
+        ->postJson('/api/v1/sesi/konfirmasi', ['kata_sandi' => 'BatikSolo2026'])
+        ->assertOk()
+        ->json('data.kunci');
+
+    $this->getJson('/api/v1/dompet/mutasi')->assertUnauthorized();
+
+    $this->denganKunci($kunciBaru)->getJson('/api/v1/dompet/mutasi')
+        ->assertOk()
+        ->assertJsonPath('meta.total_data', 1)
+        ->assertJsonPath('data.0.jenis', 'lepas_dana')
+        ->assertJsonPath('data.0.jumlah.tampilan', '+Rp 363.500')
+        ->assertJsonPath('data.0.saldo_setelah', 363_500)
+        ->assertJsonMissingPath('data.0.kelompok');
+});
+
+it('menampilkan hanya mutasi dompet sendiri, terbaru lebih dulu', function () {
+    $sri = Pengguna::factory()->create();
+    $wulan = Pengguna::factory()->create();
+    lepasDanaKe($sri, 100_000, 'LPK-UJI-1005');
+    lepasDanaKe($wulan, 55_000, 'LPK-UJI-1006');
+    lepasDanaKe($sri, 250_000, 'LPK-UJI-1007');
+
+    $this->sebagai($sri)->getJson('/api/v1/dompet/mutasi')
+        ->assertOk()
+        ->assertJsonPath('meta.total_data', 2)
+        ->assertJsonPath('data.0.rujukan', 'LPK-UJI-1007')
+        ->assertJsonPath('data.0.saldo_setelah', 350_000)
+        ->assertJsonPath('data.1.rujukan', 'LPK-UJI-1005');
+
+    $this->sebagai(Pengguna::factory()->create())->getJson('/api/v1/dompet/mutasi')
+        ->assertOk()
+        ->assertJsonPath('meta.total_data', 0);
+});
+
+it('menjalankan seeder contoh berulang kali tanpa menggandakan mutasi', function () {
+    $this->seed();
+    $this->seed();
+
+    expect(MutasiSaldo::where('rujukan', 'LPK-CONTOH-0001')->count())->toBe(6);
+    $this->artisan('lapak:periksa-buku')->assertSuccessful();
+
+    $sri = Pengguna::where('surel', 'sri@lapak.test')->sole();
+    $this->sebagai($sri)->getJson('/api/v1/dompet')->assertJsonPath('data.saldo.rupiah', 363_500);
 });

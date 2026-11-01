@@ -11,6 +11,7 @@ use App\Exceptions\SaldoTidakCukup;
 use App\Models\Dompet;
 use App\Models\MutasiSaldo;
 use App\Models\Pengguna;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -23,12 +24,21 @@ class BukuBesar
 
     public function dompetPenjual(Pengguna $penjual): Dompet
     {
-        return $this->ambilAtauBuat('penjual:'.$penjual->id, JenisDompet::Penjual, $penjual->id);
+        return $this->ambilAtauBuat($this->kodePenjual($penjual), JenisDompet::Penjual, $penjual->id);
     }
 
     public function cariDompetPenjual(Pengguna $penjual): ?Dompet
     {
-        return Dompet::query()->where('kode', 'penjual:'.$penjual->id)->first();
+        return Dompet::query()->where('kode', $this->kodePenjual($penjual))->first();
+    }
+
+    public function mutasiPenjual(Pengguna $penjual): Builder
+    {
+        $kode = $this->kodePenjual($penjual);
+
+        return MutasiSaldo::query()
+            ->whereHas('dompet', fn (Builder $dompet) => $dompet->where('kode', $kode))
+            ->orderByDesc('id');
     }
 
     public function pindahkan(
@@ -45,12 +55,12 @@ class BukuBesar
             $sumberDb = Dompet::query()->whereKey($sumber->id)->lockForUpdate()->sole();
             $tujuanDb = Dompet::query()->whereKey($tujuan->id)->lockForUpdate()->sole();
 
-            if (! $sumberDb->jenis->bolehNegatif() && $sumberDb->saldo_rupiah < $jumlah->rupiah()) {
-                throw new SaldoTidakCukup($sumberDb, $jumlah->rupiah());
+            if (! $sumberDb->jenis->bolehNegatif() && $sumberDb->saldo_rupiah < $jumlah->rupiah) {
+                throw new SaldoTidakCukup($sumberDb, $jumlah->rupiah);
             }
 
-            $saldoSetelahSumber = $sumberDb->saldo_rupiah - $jumlah->rupiah();
-            $saldoSetelahTujuan = $tujuanDb->saldo_rupiah + $jumlah->rupiah();
+            $saldoSetelahSumber = $sumberDb->saldo_rupiah - $jumlah->rupiah;
+            $saldoSetelahTujuan = $tujuanDb->saldo_rupiah + $jumlah->rupiah;
 
             $sumberDb->saldo_rupiah = $saldoSetelahSumber;
             $sumberDb->save();
@@ -58,28 +68,33 @@ class BukuBesar
             $tujuanDb->saldo_rupiah = $saldoSetelahTujuan;
             $tujuanDb->save();
 
-            MutasiSaldo::query()->create([
+            (new MutasiSaldo)->forceFill([
                 'dompet_id' => $sumberDb->id,
                 'kelompok' => $kelompok,
                 'jenis' => $jenis,
-                'jumlah_rupiah' => -$jumlah->rupiah(),
+                'jumlah_rupiah' => -$jumlah->rupiah,
                 'saldo_setelah' => $saldoSetelahSumber,
                 'rujukan' => $rujukan,
                 'keterangan' => $catatan,
-            ]);
+            ])->save();
 
-            MutasiSaldo::query()->create([
+            (new MutasiSaldo)->forceFill([
                 'dompet_id' => $tujuanDb->id,
                 'kelompok' => $kelompok,
                 'jenis' => $jenis,
-                'jumlah_rupiah' => $jumlah->rupiah(),
+                'jumlah_rupiah' => $jumlah->rupiah,
                 'saldo_setelah' => $saldoSetelahTujuan,
                 'rujukan' => $rujukan,
                 'keterangan' => $catatan,
-            ]);
+            ])->save();
         });
 
         return $kelompok;
+    }
+
+    private function kodePenjual(Pengguna $penjual): string
+    {
+        return 'penjual:'.$penjual->id;
     }
 
     private function ambilAtauBuat(string $kode, JenisDompet $jenis, ?int $penggunaId): Dompet
@@ -87,13 +102,13 @@ class BukuBesar
         $dompet = Dompet::query()->where('kode', $kode)->first();
 
         if ($dompet === null) {
-            $dompet = new Dompet([
+            $dompet = new Dompet;
+            $dompet->forceFill([
                 'kode' => $kode,
                 'jenis' => $jenis,
                 'pengguna_id' => $penggunaId,
                 'saldo_rupiah' => 0,
-            ]);
-            $dompet->save();
+            ])->save();
         }
 
         return $dompet;
